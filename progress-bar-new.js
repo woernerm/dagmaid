@@ -48,17 +48,17 @@ function initProgressBar(diagramManager, containerId, options = {}) {
             
             // Calculate progress from block states
             let totalBlocks = 0;
-            let doneBlocks = 0;
+            let completedBlocks = 0;
             
             blockStates.forEach((state, blockId) => {
                 totalBlocks++;
-                if (state === 'Done') {
-                    doneBlocks++;
+                if (state === 'Success' || state === 'Failed') {
+                    completedBlocks++;
                 }
             });
             
             // Calculate progress percentage
-            const progressPercentage = totalBlocks > 0 ? Math.round((doneBlocks / totalBlocks) * 100) : 0;
+            const progressPercentage = totalBlocks > 0 ? Math.round((completedBlocks / totalBlocks) * 100) : 0;
             
             // Generate and render progress bar HTML directly to DOM
             generateProgressBarHTML(containerId, progressPercentage, config);

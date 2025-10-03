@@ -95,18 +95,39 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
         // Process diagram text and apply theme configuration
         let modifiedDiagram = processDiagramWithTheme(fileContent, config);
         
-        // Modify diagram to add images to running blocks
+        // Modify diagram to add images to running blocks and apply state-based styling
         const dynamicSpinnerUrl = createDynamicSpinner(config.primaryTextColor);
         blockStates.forEach((state, blockId) => {
+            // Handle both rectangular [text] and rounded (text) blocks
+            const rectangularRegex = new RegExp(`(${blockId}\\[)([^\\]]+)(\\])`, 'g');
+            const roundedRegex = new RegExp(`(${blockId}\\()([^\\)]+)(\\))`, 'g');
+            
             if (state === 'Running') {
-                const regex = new RegExp(`(${blockId}\\[)([^\\]]+)(\\])`, 'g');
-                modifiedDiagram = modifiedDiagram.replace(regex, 
+                // Add spinner to running blocks (both rectangular and rounded)
+                modifiedDiagram = modifiedDiagram.replace(rectangularRegex, 
                     `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
                 );
+                modifiedDiagram = modifiedDiagram.replace(roundedRegex, 
+                    `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
+                );
+            } else if (state === 'Success') {
+                // Add green border class to successful blocks (both rectangular and rounded)
+                modifiedDiagram = modifiedDiagram.replace(rectangularRegex, `$1$2$3:::success`);
+                modifiedDiagram = modifiedDiagram.replace(roundedRegex, `$1$2$3:::success`);
+            } else if (state === 'Failed') {
+                // Add red border class to failed blocks (both rectangular and rounded)
+                modifiedDiagram = modifiedDiagram.replace(rectangularRegex, `$1$2$3:::failed`);
+                modifiedDiagram = modifiedDiagram.replace(roundedRegex, `$1$2$3:::failed`);
             }
         });
         
-        document.getElementById(containerId).innerHTML = `<div class="mermaid">${modifiedDiagram}</div>`;
+        // Add CSS styling for success and failed states
+        const styledDiagram = modifiedDiagram + `
+        
+        classDef success stroke:#28a745,stroke-width:3px
+        classDef failed stroke:#dc3545,stroke-width:3px`;
+        
+        document.getElementById(containerId).innerHTML = `<div class="mermaid">${styledDiagram}</div>`;
         mermaid.init();
     }
     
