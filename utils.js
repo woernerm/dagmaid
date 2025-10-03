@@ -13,6 +13,7 @@ function getStateClassName(stateConstant) {
 }
 
 // CSS class names derived from state constants
+const CLS_DEFAULT = 'default';
 const CLS_SUCCESS = getStateClassName(STATE_SUCCESS);
 const CLS_FAILED = getStateClassName(STATE_FAILED);
 

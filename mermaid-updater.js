@@ -1,13 +1,12 @@
 /**
- * @requires parseStates, createDiagramManager, state constants, and CSS class helpers from utils.js
+ * @requires parseStates, createDiagramManager, state constants, CSS class helpers, and CLS_DEFAULT from utils.js
  */
 
 /**
  * Extract diagram text from file content and apply theme configuration
  * @param {string} fileContent - The complete mermaid file content
  * @param {Object} config - Configuration object with theme settings
- * @param {string} config.primaryColor - Primary color for mermaid theme
- * @param {string} config.primaryTextColor - Primary text color for mermaid theme
+ * @param {string} config.defaultStyle - Default CSS styling for blocks
  * @returns {string} Processed diagram text with theme configuration
  */
 function addFrontMatter(fileContent, config) {
@@ -16,13 +15,19 @@ function addFrontMatter(fileContent, config) {
     
     // Inject theme configuration if not already present
     if (!diagramText.includes('---\nconfig:')) {
+        // Extract colors from defaultStyle for theme variables
+        const fillMatch = config.defaultStyle.match(/fill:#([a-fA-F0-9]{3,6})/);
+        const colorMatch = config.defaultStyle.match(/color:#([a-fA-F0-9]{3,6})/);
+        const primaryColor = fillMatch ? `#${fillMatch[1]}` : '#4472C4';
+        const primaryTextColor = colorMatch ? `#${colorMatch[1]}` : '#fff';
+        
         const themeConfig = (
             "---\n" +
             "config:\n" +
             "  theme: 'base'\n" +
             "  themeVariables:\n" +
-            `    primaryColor: '${config.primaryColor}'\n` +
-            `    primaryTextColor: '${config.primaryTextColor}'\n` +
+            `    primaryColor: '${primaryColor}'\n` +
+            `    primaryTextColor: '${primaryTextColor}'\n` +
             "---\n\n"
         );
         return themeConfig + diagramText;
@@ -91,19 +96,21 @@ function style(diagram, blockId, replacement) {
  * @param {Object} diagramManager - Diagram manager instance from createDiagramManager
  * @param {string} containerId - ID of the HTML element to contain the diagram
  * @param {Object} options - Configuration options
- * @param {string} options.primaryColor - Primary color for mermaid theme
- * @param {string} options.primaryTextColor - Primary text color for mermaid theme
+ * @param {string} options.defaultStyle - Default CSS styling for blocks (default: 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff')
  * @param {string} options.successStyle - CSS styling for success blocks (default: 'stroke:#28a745,stroke-width:3px')
  * @param {string} options.failedStyle - CSS styling for failed blocks (default: 'stroke:#dc3545,stroke-width:3px')
  */
 function initMermaidUpdater(diagramManager, containerId, options = {}) {
     // Default configuration
     const config = {
-        primaryColor: options.primaryColor || '#4472C4',
-        primaryTextColor: options.primaryTextColor || '#fff',
+        defaultStyle: options.defaultStyle || 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff',
         successStyle: options.successStyle || 'stroke:#28a745,stroke-width:3px',
         failedStyle: options.failedStyle || 'stroke:#dc3545,stroke-width:3px'
     };
+    
+    // Extract text color from defaultStyle for spinner
+    const textColorMatch = config.defaultStyle.match(/color:#([a-fA-F0-9]{3,6})/);
+    const spinnerColor = textColorMatch ? `#${textColorMatch[1]}` : '#fff';
     
     // Initialize Mermaid
     mermaid.initialize({startOnLoad: true});
@@ -116,10 +123,12 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
         let diagram = addFrontMatter(fileContent, config);
         
         // Modify diagram to add images to running blocks and apply state-based styling
-        const dynamicSpinnerUrl = spinner(config.primaryTextColor);
+        const dynamicSpinnerUrl = spinner(spinnerColor);
         blockStates.forEach((state, blockId) => {
             if (state === STATE_RUNNING) {
                 // Add spinner to running blocks (both rectangular and rounded)
+                // No need to add default class explicitly as Mermaid applies it by 
+                // default.
                 diagram = style(diagram, blockId, 
                     `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
                 );
@@ -132,12 +141,14 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
             }
         });
         
-        // Add CSS styling for success and failed states
+        // Add CSS styling for success and failed states. Also override Mermaid's
+        // default styling by defining our own default class.
         const styledDiagram = diagram + `
         
+        classDef default ${config.defaultStyle}
         classDef ${CLS_SUCCESS} ${config.successStyle}
         classDef ${CLS_FAILED} ${config.failedStyle}`;
-        
+
         document.getElementById(containerId).innerHTML = `<div class="mermaid">${styledDiagram}</div>`;
         mermaid.init();
     }
