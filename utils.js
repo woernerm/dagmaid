@@ -2,6 +2,20 @@
  * Utility functions for parsing mermaid diagram files and centralized file management
  */
 
+// State constants - modify these to change state names throughout the application
+const STATE_RUNNING = 'Running';
+const STATE_SUCCESS = 'Success';
+const STATE_FAILED = 'Failed';
+
+// Helper function to generate CSS class names from state constants
+function getStateClassName(stateConstant) {
+    return stateConstant.replace(/\s+/g, '').toLowerCase();
+}
+
+// CSS class names derived from state constants
+const CSS_CLASS_SUCCESS = getStateClassName(STATE_SUCCESS);
+const CSS_CLASS_FAILED = getStateClassName(STATE_FAILED);
+
 /**
  * Parse session data from mermaid file comments and return block states
  * @param {string} fileContent - The complete mermaid file content

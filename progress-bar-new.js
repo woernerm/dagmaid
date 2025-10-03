@@ -26,7 +26,7 @@ function generateProgressBarHTML(containerId, progressPercentage, config) {
  * Progress Bar Auto-Updater
  * Automatically updates a progress bar based on "Done" blocks in diagram.mmd
  * 
- * @requires parseBlockStatesFromComments and createDiagramManager functions from utils.js
+ * @requires parseBlockStatesFromComments, createDiagramManager, and state constants from utils.js
  * 
  * @param {Object} diagramManager - Diagram manager instance from createDiagramManager
  * @param {string} containerId - ID of the HTML element to contain the progress bar
@@ -52,7 +52,7 @@ function initProgressBar(diagramManager, containerId, options = {}) {
             
             blockStates.forEach((state, blockId) => {
                 totalBlocks++;
-                if (state === 'Success' || state === 'Failed') {
+                if (state === STATE_SUCCESS || state === STATE_FAILED) {
                     completedBlocks++;
                 }
             });
