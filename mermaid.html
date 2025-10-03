@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mermaid Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div id="progress-bar"></div>
+    <div id="diagram"></div>
+    <script src="mermaid-updater.js"></script>
+    <script src="progress-bar.js"></script>
+    <script>
+        // Initialize the progress bar
+        initProgressBar('session.lst', 'progress-bar', {
+            interval_s: 0.5,
+            barColor: '#4472C4',
+            backgroundColor: '#e9ecef'
+        });
+        
+        // Initialize the Mermaid updater
+        initMermaidUpdater('diagram.txt', 'session.lst', 'diagram', {
+            interval_s: 0.5,
+            primaryColor: '#4472C4',
+            primaryTextColor: '#fff'
+        });
+    </script>
+</body>
+</html>
