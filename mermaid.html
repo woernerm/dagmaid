@@ -7,21 +7,33 @@
 <body>
     <div id="progress-bar"></div>
     <div id="diagram"></div>
+    <script src="utils.js"></script>
     <script src="mermaid-updater.js"></script>
-    <script src="progress-bar.js"></script>
+    <script src="progress-bar-new.js"></script>
     <script>
-        // Initialize the progress bar
-        initProgressBar('session.lst', 'progress-bar', {
-            interval_s: 0.5,
+        // Create centralized diagram manager (fetches diagram.mmd only once)
+        const diagramManager = createDiagramManager('diagram.mmd', 0.5);
+        
+        // Initialize the progress bar with the shared manager
+        const progressCleanup = initProgressBar(diagramManager, 'progress-bar', {
             barColor: '#4472C4',
             backgroundColor: '#e9ecef'
         });
         
-        // Initialize the Mermaid updater
-        initMermaidUpdater('diagram.txt', 'session.lst', 'diagram', {
-            interval_s: 0.5,
+        // Initialize the Mermaid updater with the shared manager
+        const mermaidCleanup = initMermaidUpdater(diagramManager, 'diagram', {
             primaryColor: '#4472C4',
             primaryTextColor: '#fff'
+        });
+        
+        // Start the diagram manager (begins fetching and updating)
+        diagramManager.start();
+        
+        // Optional: Cleanup function for when page unloads
+        window.addEventListener('beforeunload', () => {
+            progressCleanup();
+            mermaidCleanup();
+            diagramManager.stop();
         });
     </script>
 </body>

@@ -1,5 +1,0 @@
-graph TD
-    A[Read Data] --> B[Convert]
-    B --> C[Parse]
-    C --> D[Write to DB]
-    D --> E[Cleanup]

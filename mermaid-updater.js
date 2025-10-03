@@ -1,129 +1,120 @@
 /**
+ * @requires parseBlockStatesFromComments and createDiagramManager functions from utils.js
+ */
+
+/**
+ * Extract diagram text from file content and apply theme configuration
+ * @param {string} fileContent - The complete mermaid file content
+ * @param {Object} config - Configuration object with theme settings
+ * @param {string} config.primaryColor - Primary color for mermaid theme
+ * @param {string} config.primaryTextColor - Primary text color for mermaid theme
+ * @returns {string} Processed diagram text with theme configuration
+ */
+function processDiagramWithTheme(fileContent, config) {
+    // Get diagram text (excluding comments)
+    const diagramText = fileContent.split('\n').filter(l => !l.startsWith('%%')).join('\n');
+    
+    // Inject theme configuration if not already present
+    if (!diagramText.includes('---\nconfig:')) {
+        const themeConfig = (
+            "---\n" +
+            "config:\n" +
+            "  theme: 'base'\n" +
+            "  themeVariables:\n" +
+            `    primaryColor: '${config.primaryColor}'\n` +
+            `    primaryTextColor: '${config.primaryTextColor}'\n` +
+            "---\n\n"
+        );
+        return themeConfig + diagramText;
+    }
+    
+    return diagramText;
+}
+
+/**
+ * Create dynamic spinner SVG with specified color
+ * @param {string} color - The color for the spinner dots
+ * @returns {string} Base64 encoded SVG data URL
+ */
+function createDynamicSpinner(color) {
+    const svgContent = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <style>
+            .dot1 { animation: spinner_fade 1.0s linear infinite 0s; }
+            .dot2 { animation: spinner_fade 1.0s linear infinite 0.125s; }
+            .dot3 { animation: spinner_fade 1.0s linear infinite 0.25s; }
+            .dot4 { animation: spinner_fade 1.0s linear infinite 0.375s; }
+            .dot5 { animation: spinner_fade 1.0s linear infinite 0.5s; }
+            .dot6 { animation: spinner_fade 1.0s linear infinite 0.625s; }
+            .dot7 { animation: spinner_fade 1.0s linear infinite 0.75s; }
+            .dot8 { animation: spinner_fade 1.0s linear infinite 0.875s; }
+            @keyframes spinner_fade {
+                0% { opacity: 1; }
+                12.5% { opacity: 0.8; }
+                25% { opacity: 0.6; }
+                37.5% { opacity: 0.4; }
+                50%, 100% { opacity: 0.3; }
+            }
+        </style>
+        <circle cx="12" cy="5" r="2" fill="${color}" class="dot1"/>
+        <circle cx="17" cy="7" r="2" fill="${color}" class="dot2"/>
+        <circle cx="19" cy="12" r="2" fill="${color}" class="dot3"/>
+        <circle cx="17" cy="17" r="2" fill="${color}" class="dot4"/>
+        <circle cx="12" cy="19" r="2" fill="${color}" class="dot5"/>
+        <circle cx="7" cy="17" r="2" fill="${color}" class="dot6"/>
+        <circle cx="5" cy="12" r="2" fill="${color}" class="dot7"/>
+        <circle cx="7" cy="7" r="2" fill="${color}" class="dot8"/>
+    </svg>`;
+    
+    return 'data:image/svg+xml;base64,' + btoa(svgContent);
+}
+
+/**
  * Mermaid Diagram Auto-Updater
- * Automatically updates a Mermaid diagram based on session status files
+ * Automatically updates a Mermaid diagram based on embedded session comments
  * 
- * @param {string} diagramUrl - URL to the diagram.txt file
- * @param {string} sessionUrl - URL to the session.lst file
+ * @param {Object} diagramManager - Diagram manager instance from createDiagramManager
  * @param {string} containerId - ID of the HTML element to contain the diagram
  * @param {Object} options - Configuration options
- * @param {number} options.interval_s - Update interval in seconds
  * @param {string} options.primaryColor - Primary color for mermaid theme
  * @param {string} options.primaryTextColor - Primary text color for mermaid theme
  */
-function initMermaidUpdater(diagramUrl, sessionUrl, containerId, options = {}) {
+function initMermaidUpdater(diagramManager, containerId, options = {}) {
     // Default configuration
     const config = {
-        interval_s: options.interval_s || 1,
         primaryColor: options.primaryColor || '#4472C4',
         primaryTextColor: options.primaryTextColor || '#fff'
     };
     
-    // Create dynamic spinner SVG with primaryTextColor
-    function createDynamicSpinner() {
-        const svgContent = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <style>
-                .dot1 { animation: spinner_fade 1.0s linear infinite 0s; }
-                .dot2 { animation: spinner_fade 1.0s linear infinite 0.125s; }
-                .dot3 { animation: spinner_fade 1.0s linear infinite 0.25s; }
-                .dot4 { animation: spinner_fade 1.0s linear infinite 0.375s; }
-                .dot5 { animation: spinner_fade 1.0s linear infinite 0.5s; }
-                .dot6 { animation: spinner_fade 1.0s linear infinite 0.625s; }
-                .dot7 { animation: spinner_fade 1.0s linear infinite 0.75s; }
-                .dot8 { animation: spinner_fade 1.0s linear infinite 0.875s; }
-                @keyframes spinner_fade {
-                    0% { opacity: 1; }
-                    12.5% { opacity: 0.8; }
-                    25% { opacity: 0.6; }
-                    37.5% { opacity: 0.4; }
-                    50%, 100% { opacity: 0.3; }
-                }
-            </style>
-            <circle cx="12" cy="5" r="2" fill="${config.primaryTextColor}" class="dot1"/>
-            <circle cx="17" cy="7" r="2" fill="${config.primaryTextColor}" class="dot2"/>
-            <circle cx="19" cy="12" r="2" fill="${config.primaryTextColor}" class="dot3"/>
-            <circle cx="17" cy="17" r="2" fill="${config.primaryTextColor}" class="dot4"/>
-            <circle cx="12" cy="19" r="2" fill="${config.primaryTextColor}" class="dot5"/>
-            <circle cx="7" cy="17" r="2" fill="${config.primaryTextColor}" class="dot6"/>
-            <circle cx="5" cy="12" r="2" fill="${config.primaryTextColor}" class="dot7"/>
-            <circle cx="7" cy="7" r="2" fill="${config.primaryTextColor}" class="dot8"/>
-        </svg>`;
-        
-        return 'data:image/svg+xml;base64,' + btoa(svgContent);
-    }
-    
     // Initialize Mermaid
     mermaid.initialize({startOnLoad: true});
     
-    // Content tracking for change detection
-    let lastSessionContent = null;
-    let lastDiagramContent = null;
-    
-    function updateDiagram() {
-        // Prevent browser caching with fetch options
-        const fetchOptions = { cache: 'no-store' };
-        Promise.all([
-            fetch(diagramUrl, fetchOptions).then(r => r.text()),
-            fetch(sessionUrl, fetchOptions).then(r => r.text())
-        ]).then(([diagramText, sessionText]) => {
-            // Only update if content has changed (or first load)
-            if (lastSessionContent !== null && 
-                sessionText === lastSessionContent && 
-                diagramText === lastDiagramContent) {
-                return;
-            }
-            
-            lastSessionContent = sessionText;
-            lastDiagramContent = diagramText;
-            
-            // Parse session status
-            const runningBlocks = new Set();
-            sessionText.split('\n').forEach(line => {
-                const match = line.match(/^(\w+):\s*Running/);
-                if (match) {
-                    runningBlocks.add(match[1]);
-                }
-            });
-            
-            // Inject theme configuration if not already present
-            let modifiedDiagram = diagramText;
-            if (!diagramText.includes('---\nconfig:')) {
-                const themeConfig = `---
-config:
-  theme: 'base'
-  themeVariables:
-    primaryColor: '${config.primaryColor}'
-    primaryTextColor: '${config.primaryTextColor}'
-
----
-
-`;
-                modifiedDiagram = themeConfig + diagramText;
-            }
-            
-            // Modify diagram to add images to running blocks
-            const dynamicSpinnerUrl = createDynamicSpinner();
-            runningBlocks.forEach(blockId => {
+    function updateDiagram(fileContent) {
+        // Parse block states from session comments
+        const blockStates = parseBlockStatesFromComments(fileContent);
+        
+        // Process diagram text and apply theme configuration
+        let modifiedDiagram = processDiagramWithTheme(fileContent, config);
+        
+        // Modify diagram to add images to running blocks
+        const dynamicSpinnerUrl = createDynamicSpinner(config.primaryTextColor);
+        blockStates.forEach((state, blockId) => {
+            if (state === 'Running') {
                 const regex = new RegExp(`(${blockId}\\[)([^\\]]+)(\\])`, 'g');
                 modifiedDiagram = modifiedDiagram.replace(regex, 
                     `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
                 );
-            });
-            
-            document.getElementById(containerId).innerHTML = `<div class="mermaid">${modifiedDiagram}</div>`;
-            mermaid.init();
-        }).catch(error => {
-            console.error('Error updating diagram:', error);
+            }
         });
+        
+        document.getElementById(containerId).innerHTML = `<div class="mermaid">${modifiedDiagram}</div>`;
+        mermaid.init();
     }
     
-    // Initial load
-    updateDiagram();
-    
-    // Set up automatic refresh
-    const intervalId = setInterval(updateDiagram, config.interval_s * 1000);
+    // Subscribe to diagram manager for updates
+    const unsubscribe = diagramManager.subscribe(updateDiagram);
     
     // Return cleanup function
     return function cleanup() {
-        clearInterval(intervalId);
+        unsubscribe();
     };
 }
