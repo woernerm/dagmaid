@@ -1,5 +1,5 @@
 /**
- * @requires parseBlockStatesFromComments, createDiagramManager, state constants, and CSS class helpers from utils.js
+ * @requires parseStates, createDiagramManager, state constants, and CSS class helpers from utils.js
  */
 
 /**
@@ -10,7 +10,7 @@
  * @param {string} config.primaryTextColor - Primary text color for mermaid theme
  * @returns {string} Processed diagram text with theme configuration
  */
-function processDiagramWithTheme(fileContent, config) {
+function addFrontMatter(fileContent, config) {
     // Get diagram text (excluding comments)
     const diagramText = fileContent.split('\n').filter(l => !l.startsWith('%%')).join('\n');
     
@@ -36,7 +36,7 @@ function processDiagramWithTheme(fileContent, config) {
  * @param {string} color - The color for the spinner dots
  * @returns {string} Base64 encoded SVG data URL
  */
-function createDynamicSpinner(color) {
+function spinner(color) {
     const svgContent = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <style>
             .dot1 { animation: spinner_fade 1.0s linear infinite 0s; }
@@ -69,6 +69,22 @@ function createDynamicSpinner(color) {
 }
 
 /**
+ * Helper function to apply transformations to both rectangular and rounded blocks
+ * @param {string} diagram - The diagram content to modify
+ * @param {string} blockId - The block ID to target
+ * @param {string} replacement - The replacement pattern to apply
+ * @returns {string} Modified diagram content
+ */
+function style(diagram, blockId, replacement) {
+    const rectangularRegex = new RegExp(`(${blockId}\\[)([^\\]]+)(\\])`, 'g');
+    const roundedRegex = new RegExp(`(${blockId}\\()([^\\)]+)(\\))`, 'g');
+    
+    return diagram
+        .replace(rectangularRegex, replacement)
+        .replace(roundedRegex, replacement);
+}
+
+/**
  * Mermaid Diagram Auto-Updater
  * Automatically updates a Mermaid diagram based on embedded session comments
  * 
@@ -77,12 +93,16 @@ function createDynamicSpinner(color) {
  * @param {Object} options - Configuration options
  * @param {string} options.primaryColor - Primary color for mermaid theme
  * @param {string} options.primaryTextColor - Primary text color for mermaid theme
+ * @param {string} options.successStyle - CSS styling for success blocks (default: 'stroke:#28a745,stroke-width:3px')
+ * @param {string} options.failedStyle - CSS styling for failed blocks (default: 'stroke:#dc3545,stroke-width:3px')
  */
 function initMermaidUpdater(diagramManager, containerId, options = {}) {
     // Default configuration
     const config = {
         primaryColor: options.primaryColor || '#4472C4',
-        primaryTextColor: options.primaryTextColor || '#fff'
+        primaryTextColor: options.primaryTextColor || '#fff',
+        successStyle: options.successStyle || 'stroke:#28a745,stroke-width:3px',
+        failedStyle: options.failedStyle || 'stroke:#dc3545,stroke-width:3px'
     };
     
     // Initialize Mermaid
@@ -90,42 +110,33 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
     
     function updateDiagram(fileContent) {
         // Parse block states from session comments
-        const blockStates = parseBlockStatesFromComments(fileContent);
+        const blockStates = parseStates(fileContent);
         
         // Process diagram text and apply theme configuration
-        let modifiedDiagram = processDiagramWithTheme(fileContent, config);
+        let diagram = addFrontMatter(fileContent, config);
         
         // Modify diagram to add images to running blocks and apply state-based styling
-        const dynamicSpinnerUrl = createDynamicSpinner(config.primaryTextColor);
+        const dynamicSpinnerUrl = spinner(config.primaryTextColor);
         blockStates.forEach((state, blockId) => {
-            // Handle both rectangular [text] and rounded (text) blocks
-            const rectangularRegex = new RegExp(`(${blockId}\\[)([^\\]]+)(\\])`, 'g');
-            const roundedRegex = new RegExp(`(${blockId}\\()([^\\)]+)(\\))`, 'g');
-            
             if (state === STATE_RUNNING) {
                 // Add spinner to running blocks (both rectangular and rounded)
-                modifiedDiagram = modifiedDiagram.replace(rectangularRegex, 
-                    `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
-                );
-                modifiedDiagram = modifiedDiagram.replace(roundedRegex, 
+                diagram = style(diagram, blockId, 
                     `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
                 );
             } else if (state === STATE_SUCCESS) {
                 // Add green border class to successful blocks (both rectangular and rounded)
-                modifiedDiagram = modifiedDiagram.replace(rectangularRegex, `$1$2$3:::${CSS_CLASS_SUCCESS}`);
-                modifiedDiagram = modifiedDiagram.replace(roundedRegex, `$1$2$3:::${CSS_CLASS_SUCCESS}`);
+                diagram = style(diagram, blockId, `$1$2$3:::${CLS_SUCCESS}`);
             } else if (state === STATE_FAILED) {
                 // Add red border class to failed blocks (both rectangular and rounded)
-                modifiedDiagram = modifiedDiagram.replace(rectangularRegex, `$1$2$3:::${CSS_CLASS_FAILED}`);
-                modifiedDiagram = modifiedDiagram.replace(roundedRegex, `$1$2$3:::${CSS_CLASS_FAILED}`);
+                diagram = style(diagram, blockId, `$1$2$3:::${CLS_FAILED}`);
             }
         });
         
         // Add CSS styling for success and failed states
-        const styledDiagram = modifiedDiagram + `
+        const styledDiagram = diagram + `
         
-        classDef ${CSS_CLASS_SUCCESS} stroke:#28a745,stroke-width:3px
-        classDef ${CSS_CLASS_FAILED} stroke:#dc3545,stroke-width:3px`;
+        classDef ${CLS_SUCCESS} ${config.successStyle}
+        classDef ${CLS_FAILED} ${config.failedStyle}`;
         
         document.getElementById(containerId).innerHTML = `<div class="mermaid">${styledDiagram}</div>`;
         mermaid.init();

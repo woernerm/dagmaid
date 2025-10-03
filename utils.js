@@ -13,15 +13,15 @@ function getStateClassName(stateConstant) {
 }
 
 // CSS class names derived from state constants
-const CSS_CLASS_SUCCESS = getStateClassName(STATE_SUCCESS);
-const CSS_CLASS_FAILED = getStateClassName(STATE_FAILED);
+const CLS_SUCCESS = getStateClassName(STATE_SUCCESS);
+const CLS_FAILED = getStateClassName(STATE_FAILED);
 
 /**
  * Parse session data from mermaid file comments and return block states
  * @param {string} fileContent - The complete mermaid file content
  * @returns {Map<string, string>} Map of block IDs to their current states
  */
-function parseBlockStatesFromComments(fileContent) {
+function parseStates(fileContent) {
     const blockStates = new Map();
     
     // Parse session data from comments

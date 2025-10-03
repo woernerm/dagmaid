@@ -4,7 +4,7 @@
  * @param {number} progressPercentage - Progress percentage (0-100)
  * @param {Object} config - Configuration object with colors
  */
-function generateProgressBarHTML(containerId, progressPercentage, config) {
+function renderProgressBar(containerId, progressPercentage, config) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error('Progress Bar Error - Container element not found:', containerId);
@@ -26,7 +26,7 @@ function generateProgressBarHTML(containerId, progressPercentage, config) {
  * Progress Bar Auto-Updater
  * Automatically updates a progress bar based on "Done" blocks in diagram.mmd
  * 
- * @requires parseBlockStatesFromComments, createDiagramManager, and state constants from utils.js
+ * @requires parseStates, createDiagramManager, and state constants from utils.js
  * 
  * @param {Object} diagramManager - Diagram manager instance from createDiagramManager
  * @param {string} containerId - ID of the HTML element to contain the progress bar
@@ -44,7 +44,7 @@ function initProgressBar(diagramManager, containerId, options = {}) {
     function updateProgressBar(fileContent) {
         try {
             // Parse block states using shared utility function
-            const blockStates = parseBlockStatesFromComments(fileContent);
+            const blockStates = parseStates(fileContent);
             
             // Calculate progress from block states
             let totalBlocks = 0;
@@ -61,7 +61,7 @@ function initProgressBar(diagramManager, containerId, options = {}) {
             const progressPercentage = totalBlocks > 0 ? Math.round((completedBlocks / totalBlocks) * 100) : 0;
             
             // Generate and render progress bar HTML directly to DOM
-            generateProgressBarHTML(containerId, progressPercentage, config);
+            renderProgressBar(containerId, progressPercentage, config);
             
         } catch (error) {
             console.error('Error updating progress bar:', error);
