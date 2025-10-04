@@ -18,6 +18,23 @@ const CLS_SUCCESS = getStateClassName(STATE_SUCCESS);
 const CLS_FAILED = getStateClassName(STATE_FAILED);
 
 /**
+ * Parse status timestamp and compute the recency of the status in seconds
+ * @param {string} fileContent - The complete mermaid file content
+ * @returns {number|null} Age of the timestamp in seconds, or null if not found/invalid
+ */
+function getStatusAge(fileContent) {    
+    try {
+        const timestampMatch = fileContent.match(/^%% Status:\s*(.+)$/m);
+        const statusDate = new Date(timestampMatch[1].trim());
+        if (isNaN(statusDate.getTime())) return null;
+        
+        return ((new Date()).getTime() - statusDate.getTime()) / 1000;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
  * Parse session data from mermaid file comments and return block states
  * @param {string} fileContent - The complete mermaid file content
  * @returns {Map<string, string>} Map of block IDs to their current states
@@ -25,19 +42,13 @@ const CLS_FAILED = getStateClassName(STATE_FAILED);
 function parseStates(fileContent) {
     const blockStates = new Map();
     
-    // Parse session data from comments
-    const sessionLines = fileContent.split('\n').filter(l => l.startsWith('%% ') && l.includes(':'));
-    
-    // Parse session status for all blocks
-    sessionLines.forEach(line => {
-        const sessionLine = line.substring(3); // Remove '%% ' prefix
-        const match = sessionLine.match(/^(\w+):\s*(\w+)/);
-        if (match) {
-            const blockId = match[1];
-            const state = match[2];
-            blockStates.set(blockId, state);
-        }
-    });
+    // Parse session status for all blocks using global regex
+    const matches = fileContent.matchAll(/^%% (\w+):\s*(\w+)/gm);
+    for (const match of matches) {
+        const blockId = match[1];
+        const state = match[2];
+        blockStates.set(blockId, state);
+    }
     
     return blockStates;
 }

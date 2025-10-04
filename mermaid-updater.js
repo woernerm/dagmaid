@@ -10,8 +10,8 @@
  * @returns {string} Processed diagram text with theme configuration
  */
 function addFrontMatter(fileContent, config) {
-    // Get diagram text (excluding comments)
-    const diagramText = fileContent.split('\n').filter(l => !l.startsWith('%%')).join('\n');
+    // Remove comments
+    const diagramText = fileContent.replace(/^%%.*$/gm, '').trim();
     
     // Inject theme configuration if not already present
     if (!diagramText.includes('---\nconfig:')) {
@@ -118,19 +118,16 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
     function updateDiagram(fileContent) {
         // Parse block states from session comments
         const blockStates = parseStates(fileContent);
-        
-        // Process diagram text and apply theme configuration
         let diagram = addFrontMatter(fileContent, config);
         
-        // Modify diagram to add images to running blocks and apply state-based styling
-        const dynamicSpinnerUrl = spinner(spinnerColor);
+        // Apply state-based styling
         blockStates.forEach((state, blockId) => {
             if (state === STATE_RUNNING) {
                 // Add spinner to running blocks (both rectangular and rounded)
-                // No need to add default class explicitly as Mermaid applies it by 
-                // default.
-                diagram = style(diagram, blockId, 
-                    `$1<img src='${dynamicSpinnerUrl}' height='25' style='object-fit: contain;' />$2$3`
+                diagram = style(diagram, blockId, (
+                        `$1<img src='${spinner(spinnerColor)}' `
+                        `height='25' style='object-fit: contain;' />$2$3`
+                    )
                 );
             } else if (state === STATE_SUCCESS) {
                 // Add green border class to successful blocks (both rectangular and rounded)
@@ -143,13 +140,16 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
         
         // Add CSS styling for success and failed states. Also override Mermaid's
         // default styling by defining our own default class.
-        const styledDiagram = diagram + `
-        
-        classDef default ${config.defaultStyle}
-        classDef ${CLS_SUCCESS} ${config.successStyle}
-        classDef ${CLS_FAILED} ${config.failedStyle}`;
+        const styledDiagram = diagram + (
+            "\n\n" +
+            "classDef default " + config.defaultStyle + "\n" +
+            "classDef " + CLS_SUCCESS + " " + config.successStyle + "\n" +
+            "classDef " + CLS_FAILED + " " + config.failedStyle
+        );
 
-        document.getElementById(containerId).innerHTML = `<div class="mermaid">${styledDiagram}</div>`;
+        document.getElementById(containerId).innerHTML = (
+            `<div class="mermaid">${styledDiagram}</div>`
+        );
         mermaid.init();
     }
     

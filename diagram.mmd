@@ -1,12 +1,12 @@
 graph LR
-    A(Read Data) --> B(Convert)
+    Read(Read Data) --> B(Convert)
     B --> C(Parse)
-    C --> D(Write to DB)
-    D --> E(Cleanup)
+    C --> Write(Write to DB)
+    Write --> E(Cleanup)
 
-%% Session Status
-%% A: Success
+%% Status: 2025-10-04T12:00:00Z
+%% Read: Success
 %% B: Success
-%% C: Failed
-%% D: Running
+%% C: Running
+%% Write: Waiting
 %% E: Waiting
