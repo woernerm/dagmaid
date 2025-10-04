@@ -64,8 +64,9 @@ function initProgressBar(diagramManager, containerId, options = {}) {
             let totalBlocks = 0;
             let completedBlocks = 0;
             
-            blockStates.forEach((state, blockId) => {
+            blockStates.forEach((blockData, blockId) => {
                 totalBlocks++;
+                const state = blockData.state;
                 if (state === STATE_SUCCESS || state === STATE_FAILED) {
                     completedBlocks++;
                 }

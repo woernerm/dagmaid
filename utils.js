@@ -19,6 +19,65 @@ const CLS_FAILED = cssName(STATE_FAILED);
 const MAX_STATUS_AGE_S = 60;
 
 /**
+ * Convert seconds to HH:mm:ss format string
+ * @param {number} totalSeconds - Total seconds to convert
+ * @returns {string} Formatted time string in HH:mm:ss format
+ */
+function formatDuration(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Create dynamic spinner SVG with specified color
+ * @param {string} color - The color for the spinner dots
+ * @returns {string} Base64 encoded SVG data URL
+ */
+function spinner(color) {
+    const positions = [
+        [12, 5], [17, 7], [19, 12], [17, 17], 
+        [12, 19], [7, 17], [5, 12], [7, 7]
+    ];
+    
+    const dotClasses = positions.map((_, i) => 
+        `.dot${i + 1} { animation: fade 1.0s linear infinite ${i * 0.125}s; }`
+    ).join('\n');
+
+    const circles = positions.map(([cx, cy], i) => 
+        `<circle cx="${cx}" cy="${cy}" r="2" fill="${color}" class="dot${i + 1}"/>`
+    ).join('\n');
+    
+    return 'data:image/svg+xml;base64,' + btoa(
+        `<svg width="24" height="24" viewBox="0 0 24 24" ` +
+        `xmlns="http://www.w3.org/2000/svg">
+        <style>${dotClasses}
+            @keyframes fade {
+                0% { opacity: 1; }
+                12.5% { opacity: 0.8; }
+                25% { opacity: 0.6; }
+                37.5% { opacity: 0.4; }
+                50%, 100% { opacity: 0.3; }
+            }
+        </style>${circles}</svg>`
+    );
+}
+
+/**
+ * Create status line HTML with optional spinner
+ * @param {string} text - Text to display
+ * @param {boolean} showSpinner - Whether to show spinner
+ * @param {string} spinnerColor - Color for the spinner
+ * @returns {string} HTML for the status line
+ */
+function formatStatus(text, showSpinner = false, spinnerColor = '#fff') {
+    const spinnerHtml = showSpinner ? `<img src='${spinner(spinnerColor)}' height='20' style='margin-right:3px;vertical-align:middle;'/>` : '';
+    const textHtml = `<span style='line-height:20px;vertical-align:middle;'>${text}</span>`;
+    return `<br/><div style='display:flex;align-items:center;justify-content:center;font-size:14px;'>${spinnerHtml}${textHtml}</div>`;
+}
+
+/**
  * Parse status timestamp and compute the recency of the status in seconds
  * @param {string} fileContent - The complete mermaid file content
  * @returns {number|null} Age of the timestamp in seconds, or null if not found/invalid
@@ -36,22 +95,23 @@ function getStatusAge(fileContent) {
 }
 
 /**
- * Parse session data from mermaid file comments and return block states
+ * Parse session data from mermaid file comments and return block states and runtimes
  * @param {string} fileContent - The complete mermaid file content
- * @returns {Map<string, string>} Map of block IDs to their current states
+ * @returns {Map<string, Object>} Map of block IDs to {state: string, runtime: number} objects
  */
 function parseStates(fileContent) {
-    const blockStates = new Map();
+    const blockData = new Map();
     
-    // Parse session status for all blocks using global regex
-    const matches = fileContent.matchAll(/^%% (\w+):\s*(\w+)/gm);
+    // Parse session status for all blocks using global regex that captures runtime
+    const matches = fileContent.matchAll(/^%% (\w+):\s*(\w+)\s*\((\d+)s\)/gm);
     for (const match of matches) {
         const blockId = match[1];
         const state = match[2];
-        blockStates.set(blockId, state);
+        const runtime = parseInt(match[3], 10);
+        blockData.set(blockId, { state, runtime });
     }
     
-    return blockStates;
+    return blockData;
 }
 
 /**

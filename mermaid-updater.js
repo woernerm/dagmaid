@@ -46,40 +46,6 @@ function addFrontMatter(fileContent, config) {
 }
 
 /**
- * Create dynamic spinner SVG with specified color
- * @param {string} color - The color for the spinner dots
- * @returns {string} Base64 encoded SVG data URL
- */
-function spinner(color) {
-    const positions = [
-        [12, 5], [17, 7], [19, 12], [17, 17], 
-        [12, 19], [7, 17], [5, 12], [7, 7]
-    ];
-    
-    const dotClasses = positions.map((_, i) => 
-        `.dot${i + 1} { animation: fade 1.0s linear infinite ${i * 0.125}s; }`
-    ).join('\n');
-
-    const circles = positions.map(([cx, cy], i) => 
-        `<circle cx="${cx}" cy="${cy}" r="2" fill="${color}" class="dot${i + 1}"/>`
-    ).join('\n');
-    
-    return 'data:image/svg+xml;base64,' + btoa(
-        `<svg width="24" height="24" viewBox="0 0 24 24" ` +
-        `xmlns="http://www.w3.org/2000/svg">
-        <style>${dotClasses}
-            @keyframes fade {
-                0% { opacity: 1; }
-                12.5% { opacity: 0.8; }
-                25% { opacity: 0.6; }
-                37.5% { opacity: 0.4; }
-                50%, 100% { opacity: 0.3; }
-            }
-        </style>${circles}</svg>`
-    );
-}
-
-/**
  * Helper function to apply transformations to both rectangular and rounded blocks
  * @param {string} diagram - The diagram content to modify
  * @param {string} blockId - The block ID to target
@@ -135,14 +101,22 @@ function initDAG(diagramManager, containerId, options = {}) {
         let diagram = addFrontMatter(fileContent, config);
 
         // Apply state-based styling
-        const actions = {
-            [STATE_RUNNING]: !isStale ? `$1<img src='${spinner(textColor)}' height='25'/>$2$3` : null,
-            [STATE_SUCCESS]: `$1$2$3:::${CLS_SUCCESS}`,
-            [STATE_FAILED]: `$1$2$3:::${CLS_FAILED}`
-        };
-        
-        blockStates.forEach((state, blockId) => {
-            if (actions[state]) diagram = style(diagram, blockId, actions[state]);
+        blockStates.forEach((blockData, blockId) => {
+            const state = blockData.state;
+            const runtime = formatDuration(blockData.runtime);
+            
+            let action;
+            if (state === STATE_RUNNING && !isStale) {
+                action = `$1$2${formatStatus(runtime, true, textColor)}$3`;
+            } else if (state === STATE_SUCCESS) {
+                action = `$1$2${formatStatus(runtime, false, textColor)}$3:::${CLS_SUCCESS}`;
+            } else if (state === STATE_FAILED) {
+                action = `$1$2${formatStatus(runtime, false, textColor)}$3:::${CLS_FAILED}`;
+            } else {
+                action = `$1$2${formatStatus('-', false, textColor)}$3`;
+            }
+            
+            diagram = style(diagram, blockId, action);
         });
         
         const currentStyles = {
