@@ -41,8 +41,8 @@ function initProgressBar(diagramManager, containerId, options = {}) {
     const config = {
         barColor: options.barColor || '#4472C4',
         backgroundColor: options.backgroundColor || '#e9ecef',
-        staleBarColor: options.staleBarColor || '#9ca3af',        // Grey color for stale progress
-        staleBackgroundColor: options.staleBackgroundColor || '#f3f4f6'  // Light grey background for stale
+        staleBarColor: options.staleBarColor || '#9ca3af',
+        staleBackgroundColor: options.staleBackgroundColor || '#f3f4f6'
     };
     
     function updateProgressBar(fileContent) {

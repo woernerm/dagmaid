@@ -3,10 +3,6 @@
 <head>
     <title>Mermaid Diagram</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-</head>
-<body>
-    <div id="progress-bar"></div>
-    <div id="diagram"></div>
     <script src="utils.js"></script>
     <script src="mermaid-updater.js"></script>
     <script src="progress-bar-new.js"></script>
@@ -23,13 +19,13 @@
         });
         
         // Initialize the Mermaid updater with the shared manager
-        const mermaidCleanup = initMermaidUpdater(diagramManager, 'diagram', {
+        const dagCleanup = initDAG(diagramManager, 'diagram', {
             defaultStyle: 'fill:#f8f9fa,stroke:#4472C4,stroke-width:2px,color:#495057',
             successStyle: 'fill:#f8f9fa,stroke:#28a745,stroke-width:2px,color:#155724',
             failedStyle: 'fill:#f8f9fa,stroke:#dc3545,stroke-width:2px,color:#721c24',
             staleDefaultStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
-            staleSuccessStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
-            staleFailedStyle: 'fill:#f3f4f6,stroke:#d1d5db,stroke-width:2px,color:#6b7280'
+            staleSuccessStyle: 'fill:#f3f4f6,stroke:#6b8e6b,stroke-width:2px,color:#6b7280',
+            staleFailedStyle: 'fill:#f3f4f6,stroke:#a37373,stroke-width:2px,color:#6b7280'
         });
         
         // Start the diagram manager (begins fetching and updating)
@@ -38,9 +34,13 @@
         // Optional: Cleanup function for when page unloads
         window.addEventListener('beforeunload', () => {
             progressCleanup();
-            mermaidCleanup();
+            dagCleanup();
             diagramManager.stop();
         });
     </script>
+</head>
+<body>
+    <div id="progress-bar"></div>
+    <div id="diagram"></div>
 </body>
 </html>

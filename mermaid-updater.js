@@ -109,14 +109,14 @@ function style(diagram, blockId, replacement) {
  * @param {string} options.staleSuccessStyle - Success CSS styling when stale (default: same as successStyle but greyed)
  * @param {string} options.staleFailedStyle - Failed CSS styling when stale (default: same as failedStyle but greyed)
  */
-function initMermaidUpdater(diagramManager, containerId, options = {}) {
+function initDAG(diagramManager, containerId, options = {}) {
     const config = {
-        defaultStyle: 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff',
-        successStyle: 'stroke:#28a745,stroke-width:3px',
-        failedStyle: 'stroke:#dc3545,stroke-width:3px',
+        defaultStyle: 'fill:#f8f9fa,stroke:#4472C4,stroke-width:2px,color:#495057',
+        successStyle: 'fill:#f8f9fa,stroke:#28a745,stroke-width:2px,color:#155724',
+        failedStyle: 'fill:#f8f9fa,stroke:#dc3545,stroke-width:2px,color:#721c24',
         staleDefaultStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
-        staleSuccessStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
-        staleFailedStyle: 'fill:#f3f4f6,stroke:#d1d5db,stroke-width:2px,color:#6b7280',
+        staleSuccessStyle: 'fill:#f3f4f6,stroke:#6b8e6b,stroke-width:2px,color:#6b7280',
+        staleFailedStyle: 'fill:#f3f4f6,stroke:#a37373,stroke-width:2px,color:#6b7280',
         ...options
     };
     
