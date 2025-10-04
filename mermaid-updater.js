@@ -1,5 +1,5 @@
 /**
- * @requires parseStates, createDiagramManager, getStatusAge, MAX_STATUS_AGE_S, state constants, and CSS class helpers from utils.js
+ * @requires parseStates, createDiagramManager, getStatusAge, MAX_STATUS_AGE_S, createStatusLine, formatDuration, state constants, and CSS class helpers from utils.js
  */
 
 /**
@@ -101,22 +101,18 @@ function initDAG(diagramManager, containerId, options = {}) {
         let diagram = addFrontMatter(fileContent, config);
 
         // Apply state-based styling
+        const actions = {
+            [STATE_RUNNING]: (rt) => `$1$2${formatState(rt, !isStale, textColor)}$3`,
+            [STATE_SUCCESS]: (rt) => `$1$2${formatState(rt, false, textColor)}$3:::${CLS_SUCCESS}`,
+            [STATE_FAILED]: (rt) => `$1$2${formatState(rt, false, textColor)}$3:::${CLS_FAILED}`
+        };
+        
         blockStates.forEach((blockData, blockId) => {
-            const state = blockData.state;
             const runtime = formatDuration(blockData.runtime);
+            const actionFn = actions[blockData.state] || 
+                             ((rt) => `$1$2${formatState('-', false, textColor)}$3`);
             
-            let action;
-            if (state === STATE_RUNNING) {
-                action = `$1$2${formatStatus(runtime, !isStale, textColor)}$3`;
-            } else if (state === STATE_SUCCESS) {
-                action = `$1$2${formatStatus(runtime, false, textColor)}$3:::${CLS_SUCCESS}`;
-            } else if (state === STATE_FAILED) {
-                action = `$1$2${formatStatus(runtime, false, textColor)}$3:::${CLS_FAILED}`;
-            } else {
-                action = `$1$2${formatStatus('-', false, textColor)}$3`;
-            }
-            
-            diagram = style(diagram, blockId, action);
+            diagram = style(diagram, blockId, actionFn(runtime));
         });
         
         const currentStyles = {

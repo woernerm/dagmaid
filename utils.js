@@ -71,7 +71,7 @@ function spinner(color) {
  * @param {string} spinnerColor - Color for the spinner
  * @returns {string} HTML for the status line
  */
-function formatStatus(text, showSpinner = false, spinnerColor = '#fff') {
+function formatState(text, showSpinner = false, spinnerColor = '#fff') {
     const spinnerHtml = showSpinner ? `<img src='${spinner(spinnerColor)}' height='20' style='margin-right:3px;vertical-align:middle;'/>` : '';
     const textHtml = `<span style='line-height:20px;vertical-align:middle;'>${text}</span>`;
     return `<br/><div style='display:flex;align-items:center;justify-content:center;font-size:14px;'>${spinnerHtml}${textHtml}</div>`;
