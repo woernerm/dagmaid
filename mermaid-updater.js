@@ -106,8 +106,8 @@ function initDAG(diagramManager, containerId, options = {}) {
             const runtime = formatDuration(blockData.runtime);
             
             let action;
-            if (state === STATE_RUNNING && !isStale) {
-                action = `$1$2${formatStatus(runtime, true, textColor)}$3`;
+            if (state === STATE_RUNNING) {
+                action = `$1$2${formatStatus(runtime, !isStale, textColor)}$3`;
             } else if (state === STATE_SUCCESS) {
                 action = `$1$2${formatStatus(runtime, false, textColor)}$3:::${CLS_SUCCESS}`;
             } else if (state === STATE_FAILED) {
