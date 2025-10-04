@@ -118,16 +118,15 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
     function updateDiagram(fileContent) {
         // Parse block states from session comments
         const blockStates = parseStates(fileContent);
+        const spinnerURL = spinner(spinnerColor);
         let diagram = addFrontMatter(fileContent, config);
-        
+
         // Apply state-based styling
         blockStates.forEach((state, blockId) => {
             if (state === STATE_RUNNING) {
                 // Add spinner to running blocks (both rectangular and rounded)
-                diagram = style(diagram, blockId, (
-                        `$1<img src='${spinner(spinnerColor)}' `
-                        `height='25' style='object-fit: contain;' />$2$3`
-                    )
+                diagram = style(diagram, blockId, 
+                    `$1<img src='${spinnerURL}' height='25' style='object-fit: contain;' />$2$3`
                 );
             } else if (state === STATE_SUCCESS) {
                 // Add green border class to successful blocks (both rectangular and rounded)

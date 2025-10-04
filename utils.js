@@ -8,14 +8,15 @@ const STATE_SUCCESS = 'Success';
 const STATE_FAILED = 'Failed';
 
 // Helper function to generate CSS class names from state constants
-function getStateClassName(stateConstant) {
+function cssName(stateConstant) {
     return stateConstant.replace(/\s+/g, '').toLowerCase();
 }
 
 // CSS class names derived from state constants
 const CLS_DEFAULT = 'default';
-const CLS_SUCCESS = getStateClassName(STATE_SUCCESS);
-const CLS_FAILED = getStateClassName(STATE_FAILED);
+const CLS_SUCCESS = cssName(STATE_SUCCESS);
+const CLS_FAILED = cssName(STATE_FAILED);
+const MAX_STATUS_AGE_S = 60;
 
 /**
  * Parse status timestamp and compute the recency of the status in seconds

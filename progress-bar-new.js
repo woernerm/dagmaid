@@ -26,25 +26,39 @@ function renderProgressBar(containerId, progressPercentage, config) {
  * Progress Bar Auto-Updater
  * Automatically updates a progress bar based on "Done" blocks in diagram.mmd
  * 
- * @requires parseStates, createDiagramManager, and state constants from utils.js
+ * @requires parseStates, createDiagramManager, getStatusAge, MAX_STATUS_AGE_S, and state constants from utils.js
  * 
  * @param {Object} diagramManager - Diagram manager instance from createDiagramManager
  * @param {string} containerId - ID of the HTML element to contain the progress bar
  * @param {Object} options - Configuration options
  * @param {string} options.barColor - Color of the progress bar (default: '#4472C4')
  * @param {string} options.backgroundColor - Background color of the progress bar (default: '#e9ecef')
+ * @param {string} options.staleBarColor - Color of the progress bar when stale (default: '#9ca3af')
+ * @param {string} options.staleBackgroundColor - Background color when stale (default: '#f3f4f6')
  */
 function initProgressBar(diagramManager, containerId, options = {}) {
     // Default configuration
     const config = {
         barColor: options.barColor || '#4472C4',
-        backgroundColor: options.backgroundColor || '#e9ecef'
+        backgroundColor: options.backgroundColor || '#e9ecef',
+        staleBarColor: options.staleBarColor || '#9ca3af',        // Grey color for stale progress
+        staleBackgroundColor: options.staleBackgroundColor || '#f3f4f6'  // Light grey background for stale
     };
     
     function updateProgressBar(fileContent) {
         try {
             // Parse block states using shared utility function
             const blockStates = parseStates(fileContent);
+            
+            // Check if status is stale
+            const statusAge = getStatusAge(fileContent);
+            const isStale = statusAge !== null && statusAge >= MAX_STATUS_AGE_S;
+            
+            // Choose colors based on staleness
+            const currentConfig = {
+                barColor: isStale ? config.staleBarColor : config.barColor,
+                backgroundColor: isStale ? config.staleBackgroundColor : config.backgroundColor
+            };
             
             // Calculate progress from block states
             let totalBlocks = 0;
@@ -61,7 +75,7 @@ function initProgressBar(diagramManager, containerId, options = {}) {
             const progressPercentage = totalBlocks > 0 ? Math.round((completedBlocks / totalBlocks) * 100) : 0;
             
             // Generate and render progress bar HTML directly to DOM
-            renderProgressBar(containerId, progressPercentage, config);
+            renderProgressBar(containerId, progressPercentage, currentConfig);
             
         } catch (error) {
             console.error('Error updating progress bar:', error);
