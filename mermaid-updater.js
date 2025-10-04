@@ -65,7 +65,7 @@ function initDAG(diagramManager, containerId, opts = {}) {
                 [STATE_SUCCESS]: (rt) => createAction(rt, false, `:::${CLS_SUCCESS}`),
                 [STATE_FAILED]: (rt) => createAction(rt, false, `:::${CLS_FAILED}`)
             };
-            return actions[state] || ((rt) => createAction('-', false));
+            return actions[state] || ((rt) => createAction(RUNTIME_PLACEHOLDER, false));
         };
         
         parseStates(fileContent).forEach((blockData, blockId) => {

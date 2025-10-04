@@ -8,6 +8,7 @@ function cssName(stateConstant) {
 }
 
 // State names
+const STATE_DEFAULT = 'Waiting';
 const STATE_RUNNING = 'Running';
 const STATE_SUCCESS = 'Success';
 const STATE_FAILED = 'Failed';
@@ -16,6 +17,7 @@ const CLS_DEFAULT = 'default';
 const CLS_SUCCESS = cssName(STATE_SUCCESS);
 const CLS_FAILED = cssName(STATE_FAILED);
 const MAX_STATUS_AGE_S = 60;
+const RUNTIME_PLACEHOLDER = '&nbsp;';
 
 /**
  * Convert seconds to HH:mm:ss format string
@@ -113,18 +115,26 @@ function getStatusAge(fileContent) {
  * @returns {Map<string, Object>} Map of block IDs to {state: string, runtime: number} objects
  */
 function parseStates(fileContent) {
-    const blockData = new Map();
+    const blocks = new Map();
     
-    // Parse session status for all blocks using global regex that captures runtime
-    const matches = fileContent.matchAll(/^%% (\w+):\s*(\w+)\s*\((\d+)s\)/gm);
-    for (const match of matches) {
+    // First, find all block IDs in the diagram content (not in comments)
+    const diagram = extractDiagram(fileContent);
+    const blockMatches = diagram.matchAll(/(\w+)\s*(?:\[.*?\]|\(.*?\))/g);
+    for (const match of blockMatches) {
+        const blockId = match[1];
+        blocks.set(blockId, { state: STATE_DEFAULT, runtime: 0 });
+    }
+    
+    // Then, parse session status comments and override defaults where available
+    const stateMatches = fileContent.matchAll(/^%% (\w+):\s*(\w+)\s*\((\d+)s\)/gm);
+    for (const match of stateMatches) {
         const blockId = match[1];
         const state = match[2];
         const runtime = parseInt(match[3], 10);
-        blockData.set(blockId, { state, runtime });
+        blocks.set(blockId, { state, runtime });
     }
     
-    return blockData;
+    return blocks;
 }
 
 /**
