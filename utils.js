@@ -69,12 +69,29 @@ function spinner(color) {
  * @param {string} text - Text to display
  * @param {boolean} showSpinner - Whether to show spinner
  * @param {string} spinnerColor - Color for the spinner
+ * @param {string} blockId - Block ID for HTML element identification
  * @returns {string} HTML for the status line
  */
-function formatState(text, showSpinner = false, spinnerColor = '#fff') {
+function formatState(text, showSpinner = false, spinnerColor = '#fff', blockId = '') {
     const spinnerHtml = showSpinner ? `<img src='${spinner(spinnerColor)}' height='20' style='margin-right:3px;vertical-align:middle;'/>` : '';
-    const textHtml = `<span style='line-height:20px;vertical-align:middle;'>${text}</span>`;
+    const textId = blockId ? `id="${blockId}_text"` : '';
+    const textHtml = `<span ${textId} style='line-height:20px;vertical-align:middle;'>${text}</span>`;
     return `<br/><div style='display:flex;align-items:center;justify-content:center;font-size:14px;'>${spinnerHtml}${textHtml}</div>`;
+}
+
+/**
+ * Parse status timestamp and return it.
+ * @param {string} fileContent - The complete mermaid file content
+ * @returns {Date|null} The timestamp or null if not found/invalid.
+ */
+function getTimestamp(fileContent) {    
+    try {
+        const timestampMatch = fileContent.match(/^%% Status:\s*(.+)$/m);
+        const statusDate = new Date(timestampMatch[1].trim());
+        return isNaN(statusDate.getTime()) ? null : statusDate;
+    } catch (error) {
+        return null;
+    }
 }
 
 /**
@@ -83,12 +100,8 @@ function formatState(text, showSpinner = false, spinnerColor = '#fff') {
  * @returns {number|null} Age of the timestamp in seconds, or null if not found/invalid
  */
 function getStatusAge(fileContent) {    
-    try {
-        const timestampMatch = fileContent.match(/^%% Status:\s*(.+)$/m);
-        const statusDate = new Date(timestampMatch[1].trim());
-        if (isNaN(statusDate.getTime())) return null;
-        
-        return ((new Date()).getTime() - statusDate.getTime()) / 1000;
+    try {        
+        return ((new Date()).getTime() - getTimestamp(fileContent).getTime()) / 1000;
     } catch (error) {
         return null;
     }
@@ -115,22 +128,109 @@ function parseStates(fileContent) {
 }
 
 /**
+ * Compare specific attribute between two parseStates results and detect any changes
+ * @param {Map<string, Object>} oldStates - Previous states map from parseStates
+ * @param {Map<string, Object>} newStates - Current states map from parseStates
+ * @param {string} attribute - Attribute name to compare ('state' or 'runtime')
+ * @returns {boolean} True if any differences in the specified attribute are found, false otherwise
+ */
+function isAttrChange(oldStates, newStates, attribute) {
+    // Get all unique block IDs from both maps
+    const allBlockIds = new Set([...oldStates.keys(), ...newStates.keys()]);
+    
+    // Check each block ID for attribute differences
+    for (const blockId of allBlockIds) {
+        const oldBlock = oldStates.get(blockId);
+        const newBlock = newStates.get(blockId);
+        
+        // If block exists in only one map or attributes are different, it's a change
+        if (!oldBlock || !newBlock || oldBlock[attribute] !== newBlock[attribute]) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Extract fill and text colors from a CSS style string
+ * @param {string} styleString - CSS style string (e.g., 'fill:#abc123,color:#def456')
+ * @returns {Object} Object with fillColor and textColor properties
+ */
+function extractColors(styleString) {
+    if (!styleString) {
+        return {
+            fillColor: '#4472C4',
+            textColor: '#fff'
+        };
+    }
+    const fillMatch = styleString.match(/fill:#([a-fA-F0-9]{3,6})/);
+    const colorMatch = styleString.match(/color:#([a-fA-F0-9]{3,6})/);
+    return {
+        fillColor: fillMatch ? `#${fillMatch[1]}` : '#4472C4',
+        textColor: colorMatch ? `#${colorMatch[1]}` : '#fff'
+    };
+}
+
+/**
+ * Extract diagram text from file content and apply theme configuration
+ * @param {string} fileContent - The complete mermaid file content
+ * @param {Object} config - Configuration object with theme settings
+ * @param {string} config.defaultStyle - Default CSS styling for blocks
+ * @returns {string} Processed diagram text with theme configuration
+ */
+function extractDiagram(fileContent, config = {}) {
+    // Remove comments
+    const diagramText = fileContent.replace(/^%%.*$/gm, '').trim();
+    
+    // Inject theme configuration if not already present
+    if (!diagramText.includes('---\nconfig:')) {
+        const {fillColor, textColor} = extractColors(config.defaultStyle);
+        const themeConfig = (
+            "---\n" +
+            "config:\n" +
+            "  theme: 'base'\n" +
+            "  themeVariables:\n" +
+            `    primaryColor: '${fillColor}'\n` +
+            `    primaryTextColor: '${textColor}'\n` +
+            "---\n\n"
+        );
+        return themeConfig + diagramText;
+    }
+    
+    return diagramText;
+}
+
+/**
  * Centralized diagram file manager that fetches content once and notifies multiple subscribers
  * @param {string} diagramUrl - URL to the diagram.mmd file
  * @param {number} intervalSeconds - Update interval in seconds
- * @returns {Object} Manager object with subscribe method
+ * @returns {Object} Manager object with onRedraw and onUpdate subscription methods
  */
 function createDiagramManager(diagramUrl, intervalSeconds = 1) {
-    const subscribers = new Set();
-    let lastFileContent = null;
+    const onRedrawSubscribers = new Set();
+    const onUpdateSubscribers = new Set();
+    let lastStates = null;
+    let lastDiagram = null;
+    let lastTimestamp = null;
     let intervalId = null;
     
-    function notifySubscribers(fileContent) {
-        subscribers.forEach(callback => {
+    function triggerRedraw(fileContent) {
+        onRedrawSubscribers.forEach(callback => {
             try {
                 callback(fileContent);
             } catch (error) {
-                console.error('Error in diagram subscriber:', error);
+                console.error('Error in diagram onRedraw subscriber:', error);
+            }
+        });
+    }
+    
+    function triggerUpdate(fileContent) {
+        onUpdateSubscribers.forEach(callback => {
+            try {
+                callback(fileContent);
+            } catch (error) {
+                console.error('Error in diagram onUpdate subscriber:', error);
             }
         });
     }
@@ -140,10 +240,21 @@ function createDiagramManager(diagramUrl, intervalSeconds = 1) {
         fetch(diagramUrl, fetchOptions)
             .then(r => r.text())
             .then(fileContent => {
-                // Only notify if content has changed (or first load)
-                if (lastFileContent !== fileContent) {
-                    lastFileContent = fileContent;
-                    notifySubscribers(fileContent);
+                const diagram = extractDiagram(fileContent);
+                const states = parseStates(fileContent);
+                const timestmap = getTimestamp(fileContent);
+                
+                // Only notify onRedraw subscribers if content has changed (or first load)
+                if (lastDiagram !== diagram || isAttrChange(lastStates, states, 'state') || lastTimestamp?.getTime() !== timestmap?.getTime()) {
+                    lastDiagram = diagram;
+                    lastStates = states;
+                    lastTimestamp = timestmap;
+                    triggerRedraw(fileContent);
+                }
+
+                if (isAttrChange(lastStates, states, 'runtime')){
+                    lastStates = states;
+                    triggerUpdate(fileContent);
                 }
             })
             .catch(error => {
@@ -167,23 +278,35 @@ function createDiagramManager(diagramUrl, intervalSeconds = 1) {
         }
     }
     
-    function subscribe(callback) {
-        subscribers.add(callback);
-        // If we already have content, immediately notify the new subscriber
-        if (lastFileContent !== null) {
-            callback(lastFileContent);
-        }
+    function onRedraw(callback) {
+        onRedrawSubscribers.add(callback);
+
+        // Return unsubscribe function
+        return function unsubscribe() {
+            onRedrawSubscribers.delete(callback);
+        };
+    }
+    
+    function onUpdate(callback) {
+        onUpdateSubscribers.add(callback);
         
         // Return unsubscribe function
         return function unsubscribe() {
-            subscribers.delete(callback);
+            onUpdateSubscribers.delete(callback);
         };
+    }
+    
+    // Legacy support for existing subscribe method (maps to onRedraw)
+    function subscribe(callback) {
+        return onRedraw(callback);
     }
     
     return {
         start,
         stop,
-        subscribe,
-        getSubscriberCount: () => subscribers.size
+        onRedraw,
+        onUpdate,
+        subscribe, // Legacy support
+        getSubscriberCount: () => onRedrawSubscribers.size + onUpdateSubscribers.size
     };
 }

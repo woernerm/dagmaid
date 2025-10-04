@@ -1,49 +1,6 @@
 /**
- * @requires parseStates, createDiagramManager, getStatusAge, MAX_STATUS_AGE_S, createStatusLine, formatDuration, state constants, and CSS class helpers from utils.js
+ * @requires parseStates, createDiagramManager, getStatusAge, MAX_STATUS_AGE_S, createStatusLine, formatDuration, extractColors, extractDiagram, state constants, and CSS class helpers from utils.js
  */
-
-/**
- * Extract fill and text colors from a CSS style string
- * @param {string} styleString - CSS style string (e.g., 'fill:#abc123,color:#def456')
- * @returns {Object} Object with fillColor and textColor properties
- */
-function extractColors(styleString) {
-    const fillMatch = styleString.match(/fill:#([a-fA-F0-9]{3,6})/);
-    const colorMatch = styleString.match(/color:#([a-fA-F0-9]{3,6})/);
-    return {
-        fillColor: fillMatch ? `#${fillMatch[1]}` : '#4472C4',
-        textColor: colorMatch ? `#${colorMatch[1]}` : '#fff'
-    };
-}
-
-/**
- * Extract diagram text from file content and apply theme configuration
- * @param {string} fileContent - The complete mermaid file content
- * @param {Object} config - Configuration object with theme settings
- * @param {string} config.defaultStyle - Default CSS styling for blocks
- * @returns {string} Processed diagram text with theme configuration
- */
-function addFrontMatter(fileContent, config) {
-    // Remove comments
-    const diagramText = fileContent.replace(/^%%.*$/gm, '').trim();
-    
-    // Inject theme configuration if not already present
-    if (!diagramText.includes('---\nconfig:')) {
-        const {fillColor, textColor} = extractColors(config.defaultStyle);
-        const themeConfig = (
-            "---\n" +
-            "config:\n" +
-            "  theme: 'base'\n" +
-            "  themeVariables:\n" +
-            `    primaryColor: '${fillColor}'\n` +
-            `    primaryTextColor: '${textColor}'\n` +
-            "---\n\n"
-        );
-        return themeConfig + diagramText;
-    }
-    
-    return diagramText;
-}
 
 /**
  * Helper function to apply transformations to both rectangular and rounded blocks
@@ -96,21 +53,21 @@ function initDAG(diagramManager, containerId, options = {}) {
         const statusAge = getStatusAge(fileContent);
         const isStale = statusAge !== null && statusAge >= MAX_STATUS_AGE_S;
         
-        // Parse block states from session comments
-        const blockStates = parseStates(fileContent);
-        let diagram = addFrontMatter(fileContent, config);
+        let diagram = extractDiagram(fileContent, config);
 
         // Apply state-based styling
-        const actions = {
-            [STATE_RUNNING]: (rt) => `$1$2${formatState(rt, !isStale, textColor)}$3`,
-            [STATE_SUCCESS]: (rt) => `$1$2${formatState(rt, false, textColor)}$3:::${CLS_SUCCESS}`,
-            [STATE_FAILED]: (rt) => `$1$2${formatState(rt, false, textColor)}$3:::${CLS_FAILED}`
+        const getAction = (state, blockId) => {
+            const actions = {
+                [STATE_RUNNING]: (rt) => `$1$2${formatState(rt, !isStale, textColor, blockId)}$3`,
+                [STATE_SUCCESS]: (rt) => `$1$2${formatState(rt, false, textColor, blockId)}$3:::${CLS_SUCCESS}`,
+                [STATE_FAILED]: (rt) => `$1$2${formatState(rt, false, textColor, blockId)}$3:::${CLS_FAILED}`
+            };
+            return actions[state] || ((rt) => `$1$2${formatState('-', false, textColor, blockId)}$3`);
         };
         
-        blockStates.forEach((blockData, blockId) => {
+        parseStates(fileContent).forEach((blockData, blockId) => {
             const runtime = formatDuration(blockData.runtime);
-            const actionFn = actions[blockData.state] || 
-                             ((rt) => `$1$2${formatState('-', false, textColor)}$3`);
+            const actionFn = getAction(blockData.state, blockId);
             
             diagram = style(diagram, blockId, actionFn(runtime));
         });
@@ -125,9 +82,9 @@ function initDAG(diagramManager, containerId, options = {}) {
         // default styling by defining our own default class.
         const styledDiagram = diagram + (
             "\n\n" +
-            "classDef default " + currentStyles.defaultStyle + "\n" +
-            "classDef " + CLS_SUCCESS + " " + currentStyles.successStyle + "\n" +
-            "classDef " + CLS_FAILED + " " + currentStyles.failedStyle
+            `classDef default ${currentStyles.defaultStyle}` + "\n" +
+            `classDef ${CLS_SUCCESS} ${currentStyles.successStyle}` + "\n" +
+            `classDef ${CLS_FAILED} ${currentStyles.failedStyle}`
         );
 
         document.getElementById(containerId).innerHTML = (
@@ -136,11 +93,23 @@ function initDAG(diagramManager, containerId, options = {}) {
         mermaid.init();
     }
     
-    // Subscribe to diagram manager for updates
-    const unsubscribe = diagramManager.subscribe(updateDiagram);
+    function updateRuntimeOnly(fileContent) {
+        // Update each block's runtime text element within the container
+        parseStates(fileContent).forEach((blockData, blockId) => {
+            const element = document.getElementById(containerId)?.querySelector(`#${blockId}_text`);
+            if (element) {
+                element.textContent = formatDuration(blockData.runtime);
+            }
+        });
+    }
+    
+    // Subscribe to diagram manager for redraw events (full re-render)
+    const unsubscribeRedraw = diagramManager.onRedraw(updateDiagram);
+    const unsubscribeUpdate = diagramManager.onUpdate(updateRuntimeOnly);
     
     // Return cleanup function
     return function cleanup() {
-        unsubscribe();
+        unsubscribeRedraw();
+        unsubscribeUpdate();
     };
 }
