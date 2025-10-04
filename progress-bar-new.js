@@ -5,20 +5,34 @@
  * @param {Object} config - Configuration object with colors
  */
 function renderProgressBar(containerId, progressPercentage, config) {
+    const height = config.height || '20px';
+    
+    // Calculate font size relative to height (roughly 60% of height)
+    const heightValue = parseFloat(height);
+    const heightUnit = height.replace(/[\d.]/g, '') || 'px';
+    const fontSize = `${Math.max(8, heightValue * 0.6)}${heightUnit}`;
+    
     const cssContainer = (
         `width:100%;background-color:${config.backgroundColor};border-radius:8px;` +
-        `overflow:hidden;height:20px;margin:10px 0;border:1px solid #dee2e6`
+        `overflow:hidden;height:${height};margin:10px 0;border:1px solid #dee2e6;position:relative`
     );
     const cssBar = (
         `width:${progressPercentage}%;background-color:${config.barColor};` +
-        `height:100%;transition:width 0.3s ease;display:flex;align-items:center;` +
-        `justify-content:center;color:white;font-size:12px;font-weight:bold;` +
-        `font-family:'trebuchet ms',verdana,arial,sans-serif`
+        `height:100%;transition:width 0.3s ease`
     );
-    const text = progressPercentage > 15 ? `${progressPercentage}%` : '';
+    const textColor = config.textColor || 'white';
+    const cssText = (
+        `position:absolute;top:0;left:0;width:100%;height:100%;` +
+        `display:flex;align-items:center;justify-content:center;` +
+        `color:${textColor};font-size:${fontSize};font-weight:bold;` +
+        `font-family:'trebuchet ms',verdana,arial,sans-serif;pointer-events:none`
+    );
     
     document.getElementById(containerId).innerHTML = (
-        `<div style="${cssContainer}"><div style="${cssBar}">${text}</div></div>`
+        `<div style="${cssContainer}">` +
+        `<div style="${cssBar}"></div>` +
+        `<div style="${cssText}">${progressPercentage}%</div>` +
+        `</div>`
     );
 }
 
@@ -35,6 +49,8 @@ function renderProgressBar(containerId, progressPercentage, config) {
  * @param {string} options.bgColor - Background color of the progress bar (default: '#e9ecef')
  * @param {string} options.staleBarColor - Color of the progress bar when stale (default: '#9ca3af')
  * @param {string} options.staleBgColor - Background color when stale (default: '#f3f4f6')
+ * @param {string} options.height - Height of the progress bar (default: '20px')
+ * @param {string} options.textColor - Color of the percentage text (default: 'white')
  */
 function initProgressBar(diagramManager, containerId, options = {}) {
     // Default configuration
@@ -42,7 +58,9 @@ function initProgressBar(diagramManager, containerId, options = {}) {
         barColor: options.barColor || '#4472C4',
         bgColor: options.bgColor || '#e9ecef',
         staleBarColor: options.staleBarColor || '#9ca3af',
-        staleBgColor: options.staleBgColor || '#f3f4f6'
+        staleBgColor: options.staleBgColor || '#f3f4f6',
+        height: options.height || '20px',
+        textColor: options.textColor || 'white'
     };
     
     function updateProgressBar(fileContent) {
@@ -57,7 +75,9 @@ function initProgressBar(diagramManager, containerId, options = {}) {
             // Choose colors based on staleness
             const currentConfig = {
                 barColor: isStale ? config.staleBarColor : config.barColor,
-                backgroundColor: isStale ? config.staleBgColor : config.bgColor
+                backgroundColor: isStale ? config.staleBgColor : config.bgColor,
+                height: config.height,
+                textColor: config.textColor
             };
             
             // Calculate progress from block states
