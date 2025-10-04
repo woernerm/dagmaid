@@ -74,11 +74,12 @@ function spinner(color) {
  * @param {string} blockId - Block ID for HTML element identification
  * @returns {string} HTML for the status line
  */
-function formatState(text, showSpinner, color, blockId) {
+function formatState(text, showSpinner, color, blockId, fixedWidth) {
     const spHtml = showSpinner ? 
         `<img src='${spinner(color)}' height='20' style='margin-right:3px'/>` : '';
+    const widthStyle = fixedWidth ? `width:${fixedWidth};margin:0 auto;` : '';
     return `<br/><div style='display:flex;align-items:center;justify-content:center;` +
-           `font-size:14px'>${spHtml}<span id="${blockId}_text">${text}</span></div>`;
+           `font-size:14px;${widthStyle}'><div style='display:flex;align-items:center'>${spHtml}<span id="${blockId}_text">${text}</span></div></div>`;
 }
 
 /**

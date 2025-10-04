@@ -40,6 +40,7 @@ function initDAG(diagramManager, containerId, opts = {}) {
         staleDefaultStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
         staleSuccessStyle: 'fill:#f3f4f6,stroke:#6b8e6b,stroke-width:2px,color:#6b7280',
         staleFailedStyle: 'fill:#f3f4f6,stroke:#a37373,stroke-width:2px,color:#6b7280',
+        fixedWidth: undefined,  // Default: variable width
         ...opts
     };
     
@@ -58,7 +59,7 @@ function initDAG(diagramManager, containerId, opts = {}) {
         // Apply state-based styling
         const getAction = (state, blockId) => {
             const createAction = (rt, showSpinner = false, cssClass = '') => 
-                `$1$2${formatState(rt, showSpinner, textColor, blockId)}$3${cssClass}`;
+                `$1$2${formatState(rt, showSpinner, textColor, blockId, config.fixedWidth)}$3${cssClass}`;
             
             const actions = {
                 [STATE_RUNNING]: (rt) => createAction(rt, !isStale),
