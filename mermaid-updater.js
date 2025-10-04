@@ -3,6 +3,20 @@
  */
 
 /**
+ * Extract fill and text colors from a CSS style string
+ * @param {string} styleString - CSS style string (e.g., 'fill:#abc123,color:#def456')
+ * @returns {Object} Object with fillColor and textColor properties
+ */
+function extractColors(styleString) {
+    const fillMatch = styleString.match(/fill:#([a-fA-F0-9]{3,6})/);
+    const colorMatch = styleString.match(/color:#([a-fA-F0-9]{3,6})/);
+    return {
+        fillColor: fillMatch ? `#${fillMatch[1]}` : '#4472C4',
+        textColor: colorMatch ? `#${colorMatch[1]}` : '#fff'
+    };
+}
+
+/**
  * Extract diagram text from file content and apply theme configuration
  * @param {string} fileContent - The complete mermaid file content
  * @param {Object} config - Configuration object with theme settings
@@ -15,19 +29,14 @@ function addFrontMatter(fileContent, config) {
     
     // Inject theme configuration if not already present
     if (!diagramText.includes('---\nconfig:')) {
-        // Extract colors from defaultStyle for theme variables
-        const fillMatch = config.defaultStyle.match(/fill:#([a-fA-F0-9]{3,6})/);
-        const colorMatch = config.defaultStyle.match(/color:#([a-fA-F0-9]{3,6})/);
-        const primaryColor = fillMatch ? `#${fillMatch[1]}` : '#4472C4';
-        const primaryTextColor = colorMatch ? `#${colorMatch[1]}` : '#fff';
-        
+        const {fillColor, textColor} = extractColors(config.defaultStyle);
         const themeConfig = (
             "---\n" +
             "config:\n" +
             "  theme: 'base'\n" +
             "  themeVariables:\n" +
-            `    primaryColor: '${primaryColor}'\n` +
-            `    primaryTextColor: '${primaryTextColor}'\n` +
+            `    primaryColor: '${fillColor}'\n` +
+            `    primaryTextColor: '${textColor}'\n` +
             "---\n\n"
         );
         return themeConfig + diagramText;
@@ -42,35 +51,32 @@ function addFrontMatter(fileContent, config) {
  * @returns {string} Base64 encoded SVG data URL
  */
 function spinner(color) {
-    const svgContent = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <style>
-            .dot1 { animation: spinner_fade 1.0s linear infinite 0s; }
-            .dot2 { animation: spinner_fade 1.0s linear infinite 0.125s; }
-            .dot3 { animation: spinner_fade 1.0s linear infinite 0.25s; }
-            .dot4 { animation: spinner_fade 1.0s linear infinite 0.375s; }
-            .dot5 { animation: spinner_fade 1.0s linear infinite 0.5s; }
-            .dot6 { animation: spinner_fade 1.0s linear infinite 0.625s; }
-            .dot7 { animation: spinner_fade 1.0s linear infinite 0.75s; }
-            .dot8 { animation: spinner_fade 1.0s linear infinite 0.875s; }
-            @keyframes spinner_fade {
+    const positions = [
+        [12, 5], [17, 7], [19, 12], [17, 17], 
+        [12, 19], [7, 17], [5, 12], [7, 7]
+    ];
+    
+    const dotClasses = positions.map((_, i) => 
+        `.dot${i + 1} { animation: fade 1.0s linear infinite ${i * 0.125}s; }`
+    ).join('\n');
+
+    const circles = positions.map(([cx, cy], i) => 
+        `<circle cx="${cx}" cy="${cy}" r="2" fill="${color}" class="dot${i + 1}"/>`
+    ).join('\n');
+    
+    return 'data:image/svg+xml;base64,' + btoa(
+        `<svg width="24" height="24" viewBox="0 0 24 24" ` +
+        `xmlns="http://www.w3.org/2000/svg">
+        <style>${dotClasses}
+            @keyframes fade {
                 0% { opacity: 1; }
                 12.5% { opacity: 0.8; }
                 25% { opacity: 0.6; }
                 37.5% { opacity: 0.4; }
                 50%, 100% { opacity: 0.3; }
             }
-        </style>
-        <circle cx="12" cy="5" r="2" fill="${color}" class="dot1"/>
-        <circle cx="17" cy="7" r="2" fill="${color}" class="dot2"/>
-        <circle cx="19" cy="12" r="2" fill="${color}" class="dot3"/>
-        <circle cx="17" cy="17" r="2" fill="${color}" class="dot4"/>
-        <circle cx="12" cy="19" r="2" fill="${color}" class="dot5"/>
-        <circle cx="7" cy="17" r="2" fill="${color}" class="dot6"/>
-        <circle cx="5" cy="12" r="2" fill="${color}" class="dot7"/>
-        <circle cx="7" cy="7" r="2" fill="${color}" class="dot8"/>
-    </svg>`;
-    
-    return 'data:image/svg+xml;base64,' + btoa(svgContent);
+        </style>${circles}</svg>`
+    );
 }
 
 /**
@@ -104,19 +110,17 @@ function style(diagram, blockId, replacement) {
  * @param {string} options.staleFailedStyle - Failed CSS styling when stale (default: same as failedStyle but greyed)
  */
 function initMermaidUpdater(diagramManager, containerId, options = {}) {
-    // Default configuration
     const config = {
-        defaultStyle: options.defaultStyle || 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff',
-        successStyle: options.successStyle || 'stroke:#28a745,stroke-width:3px',
-        failedStyle: options.failedStyle || 'stroke:#dc3545,stroke-width:3px',
-        staleDefaultStyle: options.staleDefaultStyle || 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
-        staleSuccessStyle: options.staleSuccessStyle || 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
-        staleFailedStyle: options.staleFailedStyle || 'fill:#f3f4f6,stroke:#d1d5db,stroke-width:2px,color:#6b7280'
+        defaultStyle: 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff',
+        successStyle: 'stroke:#28a745,stroke-width:3px',
+        failedStyle: 'stroke:#dc3545,stroke-width:3px',
+        staleDefaultStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
+        staleSuccessStyle: 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
+        staleFailedStyle: 'fill:#f3f4f6,stroke:#d1d5db,stroke-width:2px,color:#6b7280',
+        ...options
     };
     
-    // Extract text color from defaultStyle for spinner
-    const textColorMatch = config.defaultStyle.match(/color:#([a-fA-F0-9]{3,6})/);
-    const spinnerColor = textColorMatch ? `#${textColorMatch[1]}` : '#fff';
+    const {textColor} = extractColors(config.defaultStyle);
     
     // Initialize Mermaid
     mermaid.initialize({startOnLoad: true});
@@ -128,23 +132,17 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
         
         // Parse block states from session comments
         const blockStates = parseStates(fileContent);
-        const spinnerURL = spinner(spinnerColor);
         let diagram = addFrontMatter(fileContent, config);
 
         // Apply state-based styling
+        const actions = {
+            [STATE_RUNNING]: !isStale ? `$1<img src='${spinner(textColor)}' height='25'/>$2$3` : null,
+            [STATE_SUCCESS]: `$1$2$3:::${CLS_SUCCESS}`,
+            [STATE_FAILED]: `$1$2$3:::${CLS_FAILED}`
+        };
+        
         blockStates.forEach((state, blockId) => {
-            if (state === STATE_RUNNING && !isStale) {
-                // Add spinner to running blocks (both rectangular and rounded) only if not stale
-                diagram = style(diagram, blockId, 
-                    `$1<img src='${spinnerURL}' height='25' style='object-fit: contain;' />$2$3`
-                );
-            } else if (state === STATE_SUCCESS) {
-                // Add green border class to successful blocks (both rectangular and rounded)
-                diagram = style(diagram, blockId, `$1$2$3:::${CLS_SUCCESS}`);
-            } else if (state === STATE_FAILED) {
-                // Add red border class to failed blocks (both rectangular and rounded)
-                diagram = style(diagram, blockId, `$1$2$3:::${CLS_FAILED}`);
-            }
+            if (actions[state]) diagram = style(diagram, blockId, actions[state]);
         });
         
         const currentStyles = {
