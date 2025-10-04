@@ -1,5 +1,5 @@
 /**
- * @requires parseStates, createDiagramManager, state constants, CSS class helpers, and CLS_DEFAULT from utils.js
+ * @requires parseStates, createDiagramManager, getStatusAge, MAX_STATUS_AGE_S, state constants, and CSS class helpers from utils.js
  */
 
 /**
@@ -99,13 +99,19 @@ function style(diagram, blockId, replacement) {
  * @param {string} options.defaultStyle - Default CSS styling for blocks (default: 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff')
  * @param {string} options.successStyle - CSS styling for success blocks (default: 'stroke:#28a745,stroke-width:3px')
  * @param {string} options.failedStyle - CSS styling for failed blocks (default: 'stroke:#dc3545,stroke-width:3px')
+ * @param {string} options.staleDefaultStyle - Default CSS styling when stale (default: same as defaultStyle but greyed)
+ * @param {string} options.staleSuccessStyle - Success CSS styling when stale (default: same as successStyle but greyed)
+ * @param {string} options.staleFailedStyle - Failed CSS styling when stale (default: same as failedStyle but greyed)
  */
 function initMermaidUpdater(diagramManager, containerId, options = {}) {
     // Default configuration
     const config = {
         defaultStyle: options.defaultStyle || 'fill:#4472C4,stroke:#ffffff,stroke-width:1px,color:#fff',
         successStyle: options.successStyle || 'stroke:#28a745,stroke-width:3px',
-        failedStyle: options.failedStyle || 'stroke:#dc3545,stroke-width:3px'
+        failedStyle: options.failedStyle || 'stroke:#dc3545,stroke-width:3px',
+        staleDefaultStyle: options.staleDefaultStyle || 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
+        staleSuccessStyle: options.staleSuccessStyle || 'fill:#f3f4f6,stroke:#9ca3af,stroke-width:2px,color:#6b7280',
+        staleFailedStyle: options.staleFailedStyle || 'fill:#f3f4f6,stroke:#d1d5db,stroke-width:2px,color:#6b7280'
     };
     
     // Extract text color from defaultStyle for spinner
@@ -116,6 +122,10 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
     mermaid.initialize({startOnLoad: true});
     
     function updateDiagram(fileContent) {
+        // Check if status is stale
+        const statusAge = getStatusAge(fileContent);
+        const isStale = statusAge !== null && statusAge >= MAX_STATUS_AGE_S;
+        
         // Parse block states from session comments
         const blockStates = parseStates(fileContent);
         const spinnerURL = spinner(spinnerColor);
@@ -123,8 +133,8 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
 
         // Apply state-based styling
         blockStates.forEach((state, blockId) => {
-            if (state === STATE_RUNNING) {
-                // Add spinner to running blocks (both rectangular and rounded)
+            if (state === STATE_RUNNING && !isStale) {
+                // Add spinner to running blocks (both rectangular and rounded) only if not stale
                 diagram = style(diagram, blockId, 
                     `$1<img src='${spinnerURL}' height='25' style='object-fit: contain;' />$2$3`
                 );
@@ -137,13 +147,19 @@ function initMermaidUpdater(diagramManager, containerId, options = {}) {
             }
         });
         
+        const currentStyles = {
+            defaultStyle: isStale ? config.staleDefaultStyle : config.defaultStyle,
+            successStyle: isStale ? config.staleSuccessStyle : config.successStyle,
+            failedStyle: isStale ? config.staleFailedStyle : config.failedStyle
+        };
+        
         // Add CSS styling for success and failed states. Also override Mermaid's
         // default styling by defining our own default class.
         const styledDiagram = diagram + (
             "\n\n" +
-            "classDef default " + config.defaultStyle + "\n" +
-            "classDef " + CLS_SUCCESS + " " + config.successStyle + "\n" +
-            "classDef " + CLS_FAILED + " " + config.failedStyle
+            "classDef default " + currentStyles.defaultStyle + "\n" +
+            "classDef " + CLS_SUCCESS + " " + currentStyles.successStyle + "\n" +
+            "classDef " + CLS_FAILED + " " + currentStyles.failedStyle
         );
 
         document.getElementById(containerId).innerHTML = (
