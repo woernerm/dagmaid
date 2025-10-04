@@ -2,17 +2,16 @@
  * Utility functions for parsing mermaid diagram files and centralized file management
  */
 
-// State constants - modify these to change state names throughout the application
-const STATE_RUNNING = 'Running';
-const STATE_SUCCESS = 'Success';
-const STATE_FAILED = 'Failed';
-
 // Helper function to generate CSS class names from state constants
 function cssName(stateConstant) {
     return stateConstant.replace(/\s+/g, '').toLowerCase();
 }
 
-// CSS class names derived from state constants
+// State names
+const STATE_RUNNING = 'Running';
+const STATE_SUCCESS = 'Success';
+const STATE_FAILED = 'Failed';
+// CSS class names
 const CLS_DEFAULT = 'default';
 const CLS_SUCCESS = cssName(STATE_SUCCESS);
 const CLS_FAILED = cssName(STATE_FAILED);
@@ -24,10 +23,11 @@ const MAX_STATUS_AGE_S = 60;
  * @returns {string} Formatted time string in HH:mm:ss format
  */
 function formatDuration(totalSeconds) {
+    const pad = n => n.toString().padStart(2, '0');
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
 /**
@@ -68,15 +68,15 @@ function spinner(color) {
  * Create status line HTML with optional spinner
  * @param {string} text - Text to display
  * @param {boolean} showSpinner - Whether to show spinner
- * @param {string} spinnerColor - Color for the spinner
+ * @param {string} color - Color for the spinner
  * @param {string} blockId - Block ID for HTML element identification
  * @returns {string} HTML for the status line
  */
-function formatState(text, showSpinner = false, spinnerColor = '#fff', blockId = '') {
-    const spinnerHtml = showSpinner ? `<img src='${spinner(spinnerColor)}' height='20' style='margin-right:3px;vertical-align:middle;'/>` : '';
-    const textId = blockId ? `id="${blockId}_text"` : '';
-    const textHtml = `<span ${textId} style='line-height:20px;vertical-align:middle;'>${text}</span>`;
-    return `<br/><div style='display:flex;align-items:center;justify-content:center;font-size:14px;'>${spinnerHtml}${textHtml}</div>`;
+function formatState(text, showSpinner, color, blockId) {
+    const spHtml = showSpinner ? 
+        `<img src='${spinner(color)}' height='20' style='margin-right:3px'/>` : '';
+    return `<br/><div style='display:flex;align-items:center;justify-content:center;` +
+           `font-size:14px'>${spHtml}<span id="${blockId}_text">${text}</span></div>`;
 }
 
 /**
@@ -208,31 +208,19 @@ function extractDiagram(fileContent, config = {}) {
  * @returns {Object} Manager object with onRedraw and onUpdate subscription methods
  */
 function createDiagramManager(diagramUrl, intervalSeconds = 1) {
-    const onRedrawSubscribers = new Set();
-    const onUpdateSubscribers = new Set();
+    const onRedrawSubs = new Set();
+    const onUpdateSubs = new Set();
     let lastStates = null;
     let lastDiagram = null;
     let lastTimestamp = null;
-    let intervalId = null;
+    let refreshTimer = null;
     
     function triggerRedraw(fileContent) {
-        onRedrawSubscribers.forEach(callback => {
-            try {
-                callback(fileContent);
-            } catch (error) {
-                console.error('Error in diagram onRedraw subscriber:', error);
-            }
-        });
+        onRedrawSubs.forEach(callback => callback(fileContent));
     }
     
     function triggerUpdate(fileContent) {
-        onUpdateSubscribers.forEach(callback => {
-            try {
-                callback(fileContent);
-            } catch (error) {
-                console.error('Error in diagram onUpdate subscriber:', error);
-            }
-        });
+        onUpdateSubs.forEach(callback => callback(fileContent));
     }
     
     function fetchAndUpdate() {
@@ -257,48 +245,35 @@ function createDiagramManager(diagramUrl, intervalSeconds = 1) {
                     triggerUpdate(fileContent);
                 }
             })
-            .catch(error => {
-                console.error('Error fetching diagram file:', error);
-            });
+            .catch(() => {}); // Network errors handled silently
     }
     
     function start() {
-        if (!intervalId) {
-            // Initial fetch
-            fetchAndUpdate();
-            // Set up periodic fetching
-            intervalId = setInterval(fetchAndUpdate, intervalSeconds * 1000);
-        }
+        if (refreshTimer) return;
+        fetchAndUpdate();
+        refreshTimer = setInterval(fetchAndUpdate, intervalSeconds * 1000);
     }
     
     function stop() {
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
+        if (!refreshTimer) return;
+        clearInterval(refreshTimer);
+        refreshTimer = null;
     }
     
     function onRedraw(callback) {
-        onRedrawSubscribers.add(callback);
+        onRedrawSubs.add(callback);
 
-        // Return unsubscribe function
         return function unsubscribe() {
-            onRedrawSubscribers.delete(callback);
+            onRedrawSubs.delete(callback);
         };
     }
     
     function onUpdate(callback) {
-        onUpdateSubscribers.add(callback);
+        onUpdateSubs.add(callback);
         
-        // Return unsubscribe function
         return function unsubscribe() {
-            onUpdateSubscribers.delete(callback);
+            onUpdateSubs.delete(callback);
         };
-    }
-    
-    // Legacy support for existing subscribe method (maps to onRedraw)
-    function subscribe(callback) {
-        return onRedraw(callback);
     }
     
     return {
@@ -306,7 +281,5 @@ function createDiagramManager(diagramUrl, intervalSeconds = 1) {
         stop,
         onRedraw,
         onUpdate,
-        subscribe, // Legacy support
-        getSubscriberCount: () => onRedrawSubscribers.size + onUpdateSubscribers.size
     };
 }
