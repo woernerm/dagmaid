@@ -17,14 +17,15 @@ const CLS_DEFAULT = 'default';
 const CLS_SUCCESS = cssName(STATE_SUCCESS);
 const CLS_FAILED = cssName(STATE_FAILED);
 const MAX_STATUS_AGE_S = 60;
-const RUNTIME_PLACEHOLDER = '&nbsp;';
+const RUNTIME_PLACEHOLDER = '\u00A0';  // Non-breaking space character
 
 /**
  * Convert seconds to HH:mm:ss format string
  * @param {number} totalSeconds - Total seconds to convert
- * @returns {string} Formatted time string in HH:mm:ss format
+ * @returns {string} Formatted time string in HH:mm:ss format or placeholder if invalid
  */
 function formatDuration(totalSeconds) {
+    if (!(totalSeconds >= 0)) return RUNTIME_PLACEHOLDER;
     const pad = n => n.toString().padStart(2, '0');
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -123,7 +124,7 @@ function parseStates(fileContent) {
     const blockMatches = diagram.matchAll(/(\w+)\s*(?:\[.*?\]|\(.*?\))/g);
     for (const match of blockMatches) {
         const blockId = match[1];
-        blocks.set(blockId, { state: STATE_DEFAULT, runtime: 0 });
+        blocks.set(blockId, { state: STATE_DEFAULT, runtime: undefined });
     }
     
     // Then, parse session status comments and override defaults where available
