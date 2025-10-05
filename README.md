@@ -1,7 +1,7 @@
 # Dagmaid
 
 I was wondering whether you could use the [Mermaid](https://mermaid.js.org/) diagramming
-tool to visualize the progress of a workflow or pipeline similar to 
+tool to visualize the live progress of a workflow or pipeline similar to 
 [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/).
 Turns out you can! All you need is a bit of JavaScript:
 
