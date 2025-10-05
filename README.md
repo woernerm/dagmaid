@@ -42,7 +42,7 @@ The principle is simple:
     
     You can choose a timestamp far in the future to effectively deactivate this feature.
 
-2.  Add comment lines to indicate the status of each block and how long it has been 
+3.  Add comment lines to indicate the status of each block and how long it has been 
     running for in seconds:
     ```
     graph LR
@@ -65,47 +65,47 @@ The principle is simple:
     Valid states are `Success`, `Failed`, `Running`, and `Waiting`. Blocks which are 
     not mentioned are assumed to be in `Waiting` state with undefined runtime.
 
-3.  Update the information in the file at least once a minute (keep the timestamp recent
+4.  Update the information in the file at least once a minute (keep the timestamp recent
     even if nothing else changes). Dagmaid will read the file once a second and 
     update the diagram in the browser.
 
-The diagram.mmd files need to be served by a web server. If you have Python installed,
-this can be as simple as calling `python -m http.server` in the directory containing the 
-files. They will then be served at `http://localhost:8000/`.
+5.  The diagram.mmd files need to be served by a web server. If you have Python installed,
+    this can be as simple as calling `python -m http.server` in the directory containing the 
+    files. They will then be served at `http://localhost:8000/`.
 
-You can now embed the diagram in any HTML file. This is a minimal example:
+    You can now embed the diagram in any HTML file. This is a minimal example:
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="utils.js"></script>
-    <script src="dag.js"></script>
-    <script src="progress-bar.js"></script>
-    <script>
-        // Create diagram manager. It continuously fetches example.mmd
-        const diagram = createDiagramManager('example.mmd', 0.5);
-        
-        // Initialize the DAG visualization.
-        const dagCleanup = createDAG(diagram, 'diagram');
-        
-        // Start fetching and updating the diagram.
-        diagram.start();
-        
-        // Cleanup everything when the page unloads.
-        window.addEventListener('beforeunload', () => {
-            progressCleanup();
-            dagCleanup();
-            diagram.stop();
-        });
-    </script>
-</head>
-<body>
-    <div id="diagram"></div>
-</body>
-</html>
-```
+    ```html
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+        <script src="utils.js"></script>
+        <script src="dag.js"></script>
+        <script src="progress-bar.js"></script>
+        <script>
+            // Create diagram manager. It continuously fetches example.mmd
+            const diagram = createDiagramManager('example.mmd', 0.5);
+
+            // Initialize the DAG visualization.
+            const dagCleanup = createDAG(diagram, 'diagram');
+
+            // Start fetching and updating the diagram.
+            diagram.start();
+
+            // Cleanup everything when the page unloads.
+            window.addEventListener('beforeunload', () => {
+                dagCleanup();
+                diagram.stop();
+            });
+        </script>
+    </head>
+    <body>
+        <div id="diagram"></div>
+    </body>
+    </html>
+    ```
+
 You can adjust the styling of the workflow within some limits by changing the CSS
 styles. Have a look in example.html for the complete set of options.
 
