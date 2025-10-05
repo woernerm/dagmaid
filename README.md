@@ -7,6 +7,7 @@ Turns out you can! All you need is a bit of JavaScript:
 
 ![Workflow Visualization](images/workflow.png)
 
+## Usage
 The principle is simple:
 
 1.  Define a workflow or pipeline in a .mmd file using Mermaid syntax. This file is 
@@ -34,7 +35,8 @@ The principle is simple:
 
     %% Status: 2025-10-05T22:00:00Z
     ```
-    If the timestamp becomes older than 60 seconds, the graph will be rendered stale:
+    If the timestamp becomes older than 60 seconds, the graph will be rendered stale to 
+    indicate a loss of connection:
 
     ![Stale Workflow Visualization](images/workflow_stale.png)
     
