@@ -33,8 +33,8 @@ jobs:
         # Create dist directory
         mkdir -p dist
         
-        # Create combined minified file
-        npx uglifyjs utils.js dag.js progress-bar.js -c -m -o dist/dagmaid.min.js
+        # Create combined minified file with proper Unicode handling
+        npx uglifyjs utils.js dag.js progress-bar.js -c -m --ascii-only=false -o dist/dagmaid.min.js
         
         # Show file sizes for comparison
         echo "Original file sizes:"
@@ -50,12 +50,13 @@ jobs:
         
     - name: Generate release notes
       run: |
-        echo "# DagMaid JavaScript - Minified Release" > release-notes.md
+        echo "# Dagmaid JavaScript - Minified Release" > release-notes.md
         echo "" >> release-notes.md
-        echo "This release contains the combined minified DagMaid JavaScript file." >> release-notes.md
+        echo "This release combines all JavaScript source files into a combined and minified file. " >> release-notes.md
+        echo "It can be included using '<script src="dagmaid.min.js"></script>' in the header section of a html file." >> release-notes.md
         echo "" >> release-notes.md
         echo "## File included:" >> release-notes.md
-        echo "- \`dagmaid.min.js\` - Combined minified file with all DagMaid components" >> release-notes.md
+        echo "- \`dagmaid.min.js\` - Combined minified file with all Dagmaid components" >> release-notes.md
         echo "" >> release-notes.md
         echo "## File size:" >> release-notes.md
         echo "\`\`\`" >> release-notes.md
