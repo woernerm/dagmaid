@@ -52,7 +52,7 @@ function renderProgressBar(containerId, progressPercentage, config) {
  * @param {string} options.height - Height of the progress bar (default: '20px')
  * @param {string} options.textColor - Color of the percentage text (default: 'white')
  */
-function initProgressBar(diagramManager, containerId, options = {}) {
+function createProgressBar(diagramManager, containerId, options = {}) {
     // Default configuration
     const config = {
         barColor: options.barColor || '#4472C4',

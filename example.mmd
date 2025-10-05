@@ -1,0 +1,16 @@
+graph LR
+    Read(Read Data) --> Convert(Convert)
+    Read(Read Data) --> Copy(Create Backup)
+    Convert --> Analyze(Analyze Data)
+    Analyze --> Write(Write to DB)
+    Write --> Cleanup(Cleanup)
+    Copy --> Inform(Send Email)
+
+%% Status: 2025-10-05T22:00:00Z
+%% Read: Success (2000s)
+%% Convert: Success (18s)
+%% Analyze: Success (180s)
+%% Write: Running (14s)
+%% Cleanup: Waiting (100s)
+%% Copy: Failed (212s)
+%% Inform: Waiting

@@ -32,7 +32,7 @@ function style(diagram, blockId, replacement) {
  * @param {string} opts.staleSuccessStyle - Success CSS styling when stale (default: same as successStyle but greyed)
  * @param {string} opts.staleFailedStyle - Failed CSS styling when stale (default: same as failedStyle but greyed)
  */
-function initDAG(diagramManager, containerId, opts = {}) {
+function createDAG(diagramManager, containerId, opts = {}) {
     const config = {
         defaultStyle: 'fill:#f8f9fa,stroke:#4472C4,stroke-width:2px,color:#495057',
         successStyle: 'fill:#f8f9fa,stroke:#28a745,stroke-width:2px,color:#155724',
@@ -52,7 +52,7 @@ function initDAG(diagramManager, containerId, opts = {}) {
     function updateDiagram(fileContent) {
         // Check if status is stale
         const statusAge = getStatusAge(fileContent);
-        const isStale = statusAge !== null && statusAge >= MAX_STATUS_AGE_S;
+        const isStale = statusAge !== null && statusAge > MAX_STATUS_AGE_S;
         
         let diagram = extractDiagram(fileContent, config);
 

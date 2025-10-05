@@ -216,10 +216,10 @@ function extractDiagram(fileContent, config = {}) {
 /**
  * Centralized diagram file manager that fetches content once and notifies multiple subscribers
  * @param {string} diagramUrl - URL to the diagram.mmd file
- * @param {number} intervalSeconds - Update interval in seconds
+ * @param {number} interval_s - Update interval in seconds
  * @returns {Object} Manager object with onRedraw and onUpdate subscription methods
  */
-function createDiagramManager(diagramUrl, intervalSeconds = 1) {
+function createDiagramManager(diagramUrl, interval_s = 1) {
     const onRedrawSubs = new Set();
     const onUpdateSubs = new Set();
     let lastStates = null;
@@ -263,7 +263,7 @@ function createDiagramManager(diagramUrl, intervalSeconds = 1) {
     function start() {
         if (refreshTimer) return;
         fetchAndUpdate();
-        refreshTimer = setInterval(fetchAndUpdate, intervalSeconds * 1000);
+        refreshTimer = setInterval(fetchAndUpdate, interval_s * 1000);
     }
     
     function stop() {

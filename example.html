@@ -4,14 +4,14 @@
     <title>Mermaid Diagram</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script src="utils.js"></script>
-    <script src="mermaid-updater.js"></script>
-    <script src="progress-bar-new.js"></script>
+    <script src="dag.js"></script>
+    <script src="progress-bar.js"></script>
     <script>
         // Create centralized diagram manager (fetches diagram.mmd only once)
-        const diagramManager = createDiagramManager('diagram.mmd', 0.5);
+        const diagram = createDiagramManager('example.mmd', 0.5);
         
         // Initialize the progress bar with the shared manager
-        const progressCleanup = initProgressBar(diagramManager, 'progress-bar', {
+        const progressCleanup = createProgressBar(diagram, 'progress-bar', {
             barColor: '#4472C4',
             bgColor: '#e9ecef',
             staleBarColor: '#9ca3af',
@@ -21,7 +21,7 @@
         });
         
         // Initialize the Mermaid updater with the shared manager
-        const dagCleanup = initDAG(diagramManager, 'diagram', {
+        const dagCleanup = createDAG(diagram, 'diagram', {
             defaultStyle: 'fill:#f8f9fa,stroke:#4472C4,stroke-width:2px,color:#495057',
             successStyle: 'fill:#f8f9fa,stroke:#28a745,stroke-width:2px,color:#155724',
             failedStyle: 'fill:#f8f9fa,stroke:#dc3545,stroke-width:2px,color:#721c24',
@@ -32,13 +32,13 @@
         });
         
         // Start the diagram manager (begins fetching and updating)
-        diagramManager.start();
+        diagram.start();
         
         // Optional: Cleanup function for when page unloads
         window.addEventListener('beforeunload', () => {
             progressCleanup();
             dagCleanup();
-            diagramManager.stop();
+            diagram.stop();
         });
     </script>
 </head>
