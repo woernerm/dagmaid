@@ -3,14 +3,19 @@
 I was wondering whether you could use the [Mermaid](https://mermaid.js.org/) diagramming
 tool to visualize the live progress of a workflow or pipeline similar to 
 [Airflow](https://airflow.apache.org/) or [Dagster](https://dagster.io/).
-Turns out you can! All you need is a bit of JavaScript:
+It turns out you can! All you need is a bit of JavaScript:
 
 ![Workflow Visualization](images/workflow.png)
+
+There is also a progress-bar available that is based on the states of the blocks. See
+the example.html file for how to include it:
+
+![Progress Bar](images/progress-bar.png)
 
 ## Usage
 The principle is simple:
 
-1.  Define a workflow or pipeline in a .mmd file using Mermaid syntax. This file is 
+1.  Define a workflow or pipeline in an .mmd file using Mermaid syntax. This file is 
     meant to be generated programmatically (e.g. a Python script).
     ```
     graph LR
@@ -22,7 +27,7 @@ The principle is simple:
         Copy --> Inform(Send Email)
     ```
 
-2.  Add a comment to that file indicating the recency of the data as 
+2.  Add a comment to the file indicating the data's recency as
     [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) timestamp.
     ```
     graph LR
@@ -62,14 +67,13 @@ The principle is simple:
     %% Copy: Running (212s)
     %% Inform: Waiting
     ```
-    Valid states are `Success`, `Failed`, `Running`, and `Waiting`. Blocks which are 
-    not mentioned are assumed to be in `Waiting` state with undefined runtime.
+    Valid states are `Success`, `Failed`, `Running`, and `Waiting`. Blocks not mentioned are assumed to be in the `Waiting` state with an undefined runtime.
 
 4.  Update the information in the file at least once a minute (keep the timestamp recent
-    even if nothing else changes). Dagmaid will read the file once a second and 
-    update the diagram in the browser.
+    even if nothing else changes). Dagmaid reads the file in a specified interval and 
+    updates the diagram in the browser. In the below example, it is set to half a second.
 
-5.  The diagram.mmd files need to be served by a web server. If you have Python installed,
+5.  The .mmd files must be served by a web server. If you have Python installed,
     this can be as simple as calling `python -m http.server` in the directory containing the 
     files. They will then be served at `http://localhost:8000/`.
 
@@ -80,9 +84,7 @@ The principle is simple:
     <html>
     <head>
         <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-        <script src="utils.js"></script>
-        <script src="dag.js"></script>
-        <script src="progress-bar.js"></script>
+        <script src="dagmaid.min.js"></script>
         <script>
             // Create diagram manager. It continuously fetches example.mmd
             const diagram = createDiagramManager('example.mmd', 0.5);
@@ -93,7 +95,7 @@ The principle is simple:
             // Start fetching and updating the diagram.
             diagram.start();
 
-            // Cleanup everything when the page unloads.
+            // Clean up resources when the page unloads.
             window.addEventListener('beforeunload', () => {
                 dagCleanup();
                 diagram.stop();
