@@ -3,7 +3,9 @@
 <head>
     <title>Mermaid Diagram</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="dagmaid.min.js"></script>
+    <script src="utils.js"></script>
+    <script src="dag.js"></script>
+    <script src="progress-bar.js"></script>
     <script>
         // Create centralized diagram manager (fetches diagram.mmd only once)
         const diagram = createDiagramManager('example.mmd', 0.5);

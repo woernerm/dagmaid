@@ -17,7 +17,7 @@ const CLS_DEFAULT = 'default';
 const CLS_SUCCESS = cssName(STATE_SUCCESS);
 const CLS_FAILED = cssName(STATE_FAILED);
 const MAX_STATUS_AGE_S = 60;
-const RUNTIME_PLACEHOLDER = '\u00A0';  // Non-breaking space character
+const RUNTIME_PLACEHOLDER = '&nbsp;';  // HTML non-breaking space entity
 
 /**
  * Convert seconds to HH:mm:ss format string
