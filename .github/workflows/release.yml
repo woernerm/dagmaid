@@ -1,0 +1,114 @@
+name: Build and Release Minified JS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        npm init -y
+        npm install --save-dev uglify-js
+        
+    - name: Create minified file
+      run: |
+        # Create dist directory
+        mkdir -p dist
+        
+        # Create combined minified file
+        npx uglifyjs utils.js dag.js progress-bar.js -c -m -o dist/dagmaid.min.js
+        
+        # Show file sizes for comparison
+        echo "Original file sizes:"
+        wc -c utils.js dag.js progress-bar.js
+        echo ""
+        echo "Minified file size:"
+        wc -c dist/dagmaid.min.js
+        
+    - name: Prepare release file
+      run: |
+        # Copy the minified file to root for easy access
+        cp dist/dagmaid.min.js .
+        
+    - name: Generate release notes
+      run: |
+        echo "# DagMaid JavaScript - Minified Release" > release-notes.md
+        echo "" >> release-notes.md
+        echo "This release contains the combined minified DagMaid JavaScript file." >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## File included:" >> release-notes.md
+        echo "- \`dagmaid.min.js\` - Combined minified file with all DagMaid components" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## File size:" >> release-notes.md
+        echo "\`\`\`" >> release-notes.md
+        ls -lh dagmaid.min.js >> release-notes.md
+        echo "\`\`\`" >> release-notes.md
+        
+    - name: Generate calendar version
+      id: version
+      run: |
+        # Generate calendar version in format YY.MM.N
+        YEAR=$(date +'%y')
+        MONTH=$(date +'%m')
+        BASE_VERSION="${YEAR}.${MONTH}"
+        
+        echo "Base version: $BASE_VERSION"
+        
+        # Get existing releases with the same year/month pattern
+        EXISTING_RELEASES=$(gh release list --limit 100 --json tagName --jq '.[] | .tagName' 2>/dev/null | grep "^${BASE_VERSION}\." | sort -V | tail -1 || echo "")
+        
+        if [ -z "$EXISTING_RELEASES" ]; then
+          # No existing release for this month, start with 1
+          INCREMENT=1
+          echo "No existing releases for ${BASE_VERSION}, starting with increment 1"
+        else
+          # Extract the increment number and add 1
+          echo "Found existing release: $EXISTING_RELEASES"
+          INCREMENT=$(echo "$EXISTING_RELEASES" | sed "s/^${BASE_VERSION}\.//")
+          
+          # Validate INCREMENT is a number
+          if ! [[ "$INCREMENT" =~ ^[0-9]+$ ]]; then
+            echo "Warning: Could not parse increment from $EXISTING_RELEASES, defaulting to 1"
+            INCREMENT=1
+          else
+            INCREMENT=$((INCREMENT + 1))
+            echo "Incrementing to: $INCREMENT"
+          fi
+        fi
+        
+        VERSION="${BASE_VERSION}.${INCREMENT}"
+        echo "Generated version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: release-notes.md
+        files: |
+          dagmaid.min.js
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
